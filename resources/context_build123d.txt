@@ -1,0 +1,320 @@
+# build123d API Reference
+# Generated: 2026-01-25T00:03:03.917055
+# Version: 0.10.0
+# Source: Python introspection of build123d module
+
+## Builder Contexts
+
+BRepBuilderAPI_MakeFace()
+  # Provides methods to build faces.
+BRepBuilderAPI_MakePolygon()
+  # Describes functions to build polygonal wires. A polygonal wire can be built from any number of point
+BRepBuilderAPI_MakeSolid()
+  # Describes functions to build a solid from shells. A solid is made of one shell, or a series of shell
+BRepBuilderAPI_Sewing()
+  # Provides methods toProvides methods toProvides methods to
+BRepBuilderAPI_Transform()
+  # Geometric transformation on a shape. The transformation to be applied is defined as a gp_Trsf transf
+BRep_Builder()
+  # A framework providing advanced tolerance control. It is used to build Shapes. If tolerance control i
+BuildLine(workplane: 'Face | Plane | Location' = Plane(o=(0.00, 0.00, 0.00), x=(1.00, 0.00, 0.00), z=(0.00, 0.00, 1.00)), mode: 'Mode' = <Mode.ADD>)
+  # BuildLine
+BuildPart(*workplanes: 'Face | Plane | Location', mode: 'Mode' = <Mode.ADD>)
+  # BuildPart
+BuildSketch(*workplanes: 'Face | Plane | Location', mode: 'Mode' = <Mode.ADD>)
+  # BuildSketch
+Builder(*workplanes: 'Face | Plane | Location', mode: 'Mode' = <Mode.ADD>)
+  # Builder
+
+## 3D Shapes/Primitives
+
+BasePartObject(part: 'Part | Solid', rotation: 'RotationLike' = (0, 0, 0), align: 'Align | tuple[Align, Align, Align] | None' = None, mode: 'Mode' = <Mode.ADD>)
+  # BasePartObject
+Box(length: 'float', width: 'float', height: 'float', rotation: 'RotationLike' = (0, 0, 0), align: 'Align | tuple[Align, Align, Align]' = (<Align.CENTER>, <Align.CENTER>, <Align.CENTER>), mode: 'Mode' = <Mode.ADD>)
+  # Part Object: Box
+Cone(bottom_radius: 'float', top_radius: 'float', height: 'float', arc_size: 'float' = 360, rotation: 'RotationLike' = (0, 0, 0), align: 'Align | tuple[Align, Align, Align]' = (<Align.CENTER>, <Align.CENTER>, <Align.CENTER>), mode: 'Mode' = <Mode.ADD>)
+  # Part Object: Cone
+Cylinder(radius: 'float', height: 'float', arc_size: 'float' = 360, rotation: 'RotationLike' = (0, 0, 0), align: 'Align | tuple[Align, Align, Align]' = (<Align.CENTER>, <Align.CENTER>, <Align.CENTER>), mode: 'Mode' = <Mode.ADD>)
+  # Part Object: Cylinder
+Part(obj: 'TopoDS_Compound | Iterable[Shape] | None' = None, label: 'str' = '', color: 'Color | None' = None, material: 'str' = '', joints: 'dict[str, Joint] | None' = None, parent: 'Compound | None' = None, children: 'Sequence[Shape] | None' = None)
+  # A Compound containing 3D objects - aka Solids
+Solid(obj: 'TopoDS_Solid | Shell | None' = None, label: 'str' = '', color: 'Color | None' = None, material: 'str' = '', joints: 'dict[str, Joint] | None' = None, parent: 'Compound | None' = None)
+  # A Solid in build123d represents a three-dimensional solid geometry
+Sphere(radius: 'float', arc_size1: 'float' = -90, arc_size2: 'float' = 90, arc_size3: 'float' = 360, rotation: 'RotationLike' = (0, 0, 0), align: 'Align | tuple[Align, Align, Align]' = (<Align.CENTER>, <Align.CENTER>, <Align.CENTER>), mode: 'Mode' = <Mode.ADD>)
+  # Part Object: Sphere
+Torus(major_radius: 'float', minor_radius: 'float', minor_start_angle: 'float' = 0, minor_end_angle: 'float' = 360, major_angle: 'float' = 360, rotation: 'RotationLike' = (0, 0, 0), align: 'Align | tuple[Align, Align, Align]' = (<Align.CENTER>, <Align.CENTER>, <Align.CENTER>), mode: 'Mode' = <Mode.ADD>)
+  # Part Object: Torus
+Wedge(xsize: 'float', ysize: 'float', zsize: 'float', xmin: 'float', zmin: 'float', xmax: 'float', zmax: 'float', rotation: 'RotationLike' = (0, 0, 0), align: 'Align | tuple[Align, Align, Align]' = (<Align.CENTER>, <Align.CENTER>, <Align.CENTER>), mode: 'Mode' = <Mode.ADD>)
+  # Part Object: Wedge
+
+## 2D Shapes (Sketch Objects)
+
+BaseSketchObject(obj: 'Compound | Face', rotation: 'float' = 0, align: 'Align | tuple[Align, Align] | None' = None, mode: 'Mode' = <Mode.ADD>)
+  # BaseSketchObject
+Circle(radius: 'float', align: 'Align | tuple[Align, Align] | None' = (<Align.CENTER>, <Align.CENTER>), mode: 'Mode' = <Mode.ADD>)
+  # Sketch Object: Circle
+Ellipse(x_radius: 'float', y_radius: 'float', rotation: 'float' = 0, align: 'Align | tuple[Align, Align] | None' = (<Align.CENTER>, <Align.CENTER>), mode: 'Mode' = <Mode.ADD>)
+  # Sketch Object: Ellipse
+Face(*args: 'Any', **kwargs: 'Any')
+  # A Face in build123d represents a 3D bounded surface within the topological data
+Polygon(*pts: 'VectorLike | Iterable[VectorLike]', rotation: 'float' = 0, align: 'Align | tuple[Align, Align] | None' = (<Align.CENTER>, <Align.CENTER>), mode: 'Mode' = <Mode.ADD>)
+  # Sketch Object: Polygon
+Rectangle(width: 'float', height: 'float', rotation: 'float' = 0, align: 'Align | tuple[Align, Align] | None' = (<Align.CENTER>, <Align.CENTER>), mode: 'Mode' = <Mode.ADD>)
+  # Sketch Object: Rectangle
+RegularPolygon(radius: 'float', side_count: 'int', major_radius: 'bool' = True, rotation: 'float' = 0, align: 'tuple[Align, Align]' = (<Align.CENTER>, <Align.CENTER>), mode: 'Mode' = <Mode.ADD>)
+  # Sketch Object: Regular Polygon
+Sketch(obj: 'TopoDS_Compound | Iterable[Shape] | None' = None, label: 'str' = '', color: 'Color | None' = None, material: 'str' = '', joints: 'dict[str, Joint] | None' = None, parent: 'Compound | None' = None, children: 'Sequence[Shape] | None' = None)
+  # A Compound containing 2D objects - aka Faces
+SlotArc(arc: 'Edge | Wire', height: 'float', rotation: 'float' = 0, mode: 'Mode' = <Mode.ADD>)
+  # Sketch Object: Slot Arc
+SlotCenterPoint(center: 'VectorLike', point: 'VectorLike', height: 'float', rotation: 'float' = 0, mode: 'Mode' = <Mode.ADD>)
+  # Sketch Object: Slot Center Point
+SlotCenterToCenter(center_separation: 'float', height: 'float', rotation: 'float' = 0, mode: 'Mode' = <Mode.ADD>)
+  # Sketch Object: Slot Center To Center
+SlotOverall(width: 'float', height: 'float', rotation: 'float' = 0, align: 'Align | tuple[Align, Align] | None' = (<Align.CENTER>, <Align.CENTER>), mode: 'Mode' = <Mode.ADD>)
+  # Sketch Object: Slot Overall
+Text(txt: 'str', font_size: 'float', font: 'str' = 'Arial', font_path: 'str | None' = None, font_style: 'FontStyle' = <FontStyle.REGULAR>, text_align: 'tuple[TextAlign, TextAlign]' = (<TextAlign.CENTER>, <TextAlign.CENTER>), align: 'Align | tuple[Align, Align] | None' = None, path: 'Edge | Wire | None' = None, position_on_path: 'float' = 0.0, rotation: 'float' = 0.0, mode: 'Mode' = <Mode.ADD>)
+  # Sketch Object: Text
+Trapezoid(width: 'float', height: 'float', left_side_angle: 'float', right_side_angle: 'float | None' = None, rotation: 'float' = 0, align: 'Align | tuple[Align, Align] | None' = (<Align.CENTER>, <Align.CENTER>), mode: 'Mode' = <Mode.ADD>)
+  # Sketch Object: Trapezoid
+
+## 1D Shapes (Line/Wire Objects)
+
+Bezier(*cntl_pnts: 'VectorLike', weights: 'list[float] | None' = None, mode: 'Mode' = <Mode.ADD>)
+  # Line Object: Bezier Curve
+JernArc(start: 'VectorLike', tangent: 'VectorLike', radius: 'float', arc_size: 'float', mode: 'Mode' = <Mode.ADD>)
+  # Line Object: Jern Arc
+Line(*pts: 'VectorLike | Iterable[VectorLike]', mode: 'Mode' = <Mode.ADD>)
+  # Line Object: Line
+Polyline(*pts: 'VectorLike | Iterable[VectorLike]', close: 'bool' = False, mode: 'Mode' = <Mode.ADD>)
+  # Line Object: Polyline
+RadiusArc(start_point: 'VectorLike', end_point: 'VectorLike', radius: 'float', short_sagitta: 'bool' = True, mode: 'Mode' = <Mode.ADD>)
+  # Line Object: Radius Arc
+SagittaArc(start_point: 'VectorLike', end_point: 'VectorLike', sagitta: 'float', mode: 'Mode' = <Mode.ADD>)
+  # Line Object: Sagitta Arc
+Spline(*pts: 'VectorLike | Iterable[VectorLike]', tangents: 'Iterable[VectorLike] | None' = None, tangent_scalars: 'Iterable[float] | None' = None, periodic: 'bool' = False, mode: 'Mode' = <Mode.ADD>)
+  # Line Object: Spline
+TangentArc(*pts: 'VectorLike | Iterable[VectorLike]', tangent: 'VectorLike', tangent_from_first: 'bool' = True, mode: 'Mode' = <Mode.ADD>)
+  # Line Object: Tangent Arc
+ThreePointArc(*pts: 'VectorLike | Iterable[VectorLike]', mode: 'Mode' = <Mode.ADD>)
+  # Line Object: Three Point Arc
+
+## Operations
+
+Shell(obj: 'TopoDS_Shell | Face | Iterable[Face] | None' = None, label: 'str' = '', color: 'Color | None' = None, parent: 'Compound | None' = None)
+  # A Shell is a fundamental component in build123d's topological data structure
+abstractmethod(funcobj)
+  # A decorator indicating abstract methods.
+aci2rgb(index: 'int') -> 'RGB'
+  # Convert :ref:`ACI` into (r, g, b) tuple, based on default AutoCAD
+add(objects: build123d.topology.one_d.Edge | build123d.topology.one_d.Wire | build123d.topology.two_d.Face | build123d.topology.three_d.Solid | build123d.topology.composite.Compound | build123d.build_common.Builder | collections.abc.Iterable[build123d.topology.one_d.Edge | build123d.topology.one_d.Wire | build123d.topology.two_d.Face | build123d.topology.three_d.Solid | build123d.topology.composite.Compound | build123d.build_common.Builder], rotation: float | build123d.geometry.Rotation | tuple[float, float, float] | None = None, clean: bool = True, mode: build123d.build_enums.Mode = <Mode.ADD>) -> build123d.topology.composite.Compound
+  # Generic Object: Add Object to Part or Sketch
+ansi_pattern(*args)
+  # Prepare an ANSI line pattern for ezdxf usage.
+available_fonts() -> list[build123d.utils.FontInfo]
+  # Get list of available fonts by name and available styles (also called aspects).
+bounding_box(objects: build123d.topology.shape_core.Shape | collections.abc.Iterable[build123d.topology.shape_core.Shape] | None = None, mode: build123d.build_enums.Mode = <Mode.PRIVATE>) -> build123d.topology.composite.Sketch | build123d.topology.composite.Part
+  # Generic Operation: Add Bounding Box
+cast(typ, val)
+  # Cast a value to a type.
+chamfer(objects: build123d.topology.one_d.Edge | build123d.topology.zero_d.Vertex | collections.abc.Iterable[build123d.topology.one_d.Edge | build123d.topology.zero_d.Vertex], length: float, length2: float | None = None, angle: float | None = None, reference: build123d.topology.one_d.Edge | build123d.topology.two_d.Face | None = None) -> build123d.topology.composite.Sketch | build123d.topology.composite.Part
+  # Generic Operation: chamfer
+copy(x)
+  # Shallow copy operation on arbitrary Python objects.
+dataclass(cls=None, /, *, init=True, repr=True, eq=True, order=False, unsafe_hash=False, frozen=False, match_args=True, kw_only=False, slots=False, weakref_slot=False)
+  # Add dunder methods based on the fields defined in the class.
+delta(shapes_one: 'Iterable[Shape]', shapes_two: 'Iterable[Shape]') -> 'list[Shape]'
+  # Compare the OCCT objects of each list and return the differences
+downcast(obj: 'TopoDS_Shape') -> 'TopoDS_Shape'
+  # Downcasts a TopoDS object to suitable specialized type
+draft(faces: 'Face | Iterable[Face]', neutral_plane: 'Plane', angle: 'float') -> 'Part'
+  # Part Operation: draft
+edge(self, select: 'Select' = <Select.ALL>) -> 'Edge'
+  # Return Edge
+edges(self, select: 'Select' = <Select.ALL>) -> 'ShapeList[Edge]'
+  # Return Edges
+edges_to_wires(edges: 'Iterable[Edge]', tol: 'float' = 1e-06) -> 'ShapeList[Wire]'
+  # Convert edges to a list of wires.
+export_brep(to_export: build123d.topology.shape_core.Shape, file_path: os.PathLike | str | bytes | _io.BytesIO) -> bool
+  # Export this shape to a BREP file
+export_gltf(to_export: build123d.topology.shape_core.Shape, file_path: os.PathLike | str | bytes, unit: build123d.build_enums.Unit = <Unit.MM>, binary: bool = False, linear_deflection: float = 0.001, angular_deflection: float = 0.1) -> bool
+  # export_gltf
+export_step(to_export: build123d.topology.shape_core.Shape, file_path: os.PathLike | str | bytes, unit: build123d.build_enums.Unit = <Unit.MM>, write_pcurves: bool = True, precision_mode: build123d.build_enums.PrecisionMode = <PrecisionMode.AVERAGE>, *, timestamp: str | datetime.datetime | None = None) -> bool
+  # export_step
+export_stl(to_export: build123d.topology.shape_core.Shape, file_path: os.PathLike | str | bytes, tolerance: float = 0.001, angular_tolerance: float = 0.1, ascii_format: bool = False) -> bool
+  # Export STL
+extrude(to_extrude: 'Face | Sketch | None' = None, amount: 'float | None' = None, dir: 'VectorLike | None' = None, until: 'Until | None' = None, target: 'Compound | Solid | None' = None, both: 'bool' = False, taper: 'float' = 0.0, clean: 'bool' = True, mode: 'Mode' = <Mode.ADD>) -> 'Part'
+  # Part Operation: extrude
+face(self, select: 'Select' = <Select.ALL>) -> 'Face'
+  # Return Face
+faces(self, select: 'Select' = <Select.ALL>) -> 'ShapeList[Face]'
+  # Return Faces
+fillet(objects: build123d.topology.one_d.Edge | build123d.topology.zero_d.Vertex | collections.abc.Iterable[build123d.topology.one_d.Edge | build123d.topology.zero_d.Vertex], radius: float) -> build123d.topology.composite.Sketch | build123d.topology.composite.Part | build123d.topology.composite.Curve
+  # Generic Operation: fillet
+find_max_dimension(shapes: 'Shape | Iterable[Shape]') -> 'float'
+  # Return the maximum dimension of one or more shapes
+fix(obj: 'TopoDS_Shape') -> 'TopoDS_Shape'
+  # Fix a TopoDS object to suitable specialized type
+flatten_sequence(*obj: 'T') -> 'ShapeList[Any]'
+  # Convert a sequence of object potentially containing iterables into a flat list
+fsdecode(filename)
+  # Decode filename (an os.PathLike, bytes, or str) from the filesystem
+full_round(edge: 'Edge', invert: 'bool' = False, voronoi_point_count: 'int' = 100, mode: 'Mode' = <Mode.REPLACE>) -> 'tuple[Sketch, Vector, float]'
+  # Sketch Operation: full_round
+import_brep(file_name: os.PathLike | str | bytes) -> build123d.topology.shape_core.Shape
+  # Import shape from a BREP file
+import_step(filename: os.PathLike | str | bytes) -> build123d.topology.composite.Compound
+  # import_step
+import_stl(file_name: os.PathLike | str | bytes) -> build123d.topology.two_d.Face
+  # import_stl
+import_svg(svg_file: str | pathlib._local.Path | typing.TextIO, *, flip_y: bool = True, align: build123d.build_enums.Align | tuple[build123d.build_enums.Align, build123d.build_enums.Align] | None = <Align.MIN>, ignore_visibility: bool = False, label_by: Union[Literal['id', 'class', 'inkscape:label'], str] = 'id', is_inkscape_label: bool | None = None) -> build123d.topology.shape_core.ShapeList[build123d.topology.one_d.Wire | build123d.topology.two_d.Face]
+  # import_svg
+import_svg_as_buildline_code(file_name: os.PathLike | str | bytes) -> tuple[str, str]
+  # translate_to_buildline_code
+import_svg_document(svg_file: Union[str, pathlib._local.Path, TextIO], *, flip_y: bool = True, ignore_visibility: bool = False, metadata: Optional[Callable[[svgelements.svgelements.Shape, Sequence[Union[svgelements.svgelements.Group, svgelements.svgelements.Use]]], ~M]] = None) -> Union[ocpsvg.svg.ItemsFromDocument[tuple[Union[OCP.OCP.TopoDS.TopoDS_Wire, OCP.OCP.TopoDS.TopoDS_Face], ~M]], ocpsvg.svg.ItemsFromDocument[Union[OCP.OCP.TopoDS.TopoDS_Wire, OCP.OCP.TopoDS.TopoDS_Face]]]
+  # Import shapes from an SVG document as faces and/or wires.
+isclose_b(x: 'float', y: 'float', rel_tol=1e-09, abs_tol=1e-14) -> 'bool'
+  # Determine whether two floating point numbers are close in value.
+iso_pattern(*args)
+  # Prepare an ISO line pattern for ezdxf usage.
+loft(sections: 'Face | Sketch | Iterable[Vertex | Face | Sketch] | None' = None, ruled: 'bool' = False, clean: 'bool' = True, mode: 'Mode' = <Mode.ADD>) -> 'Part'
+  # Part Operation: loft
+make_brake_formed(thickness: 'float', station_widths: 'float | Iterable[float]', line: 'Edge | Wire | Curve | None' = None, side: 'Side' = <Side.LEFT>, kind: 'Kind' = <Kind.ARC>, clean: 'bool' = True, mode: 'Mode' = <Mode.ADD>) -> 'Part'
+  # make_brake_formed
+make_face(edges: 'Edge | Iterable[Edge] | None' = None, mode: 'Mode' = <Mode.ADD>) -> 'Sketch'
+  # Sketch Operation: make_face
+make_hull(edges: 'Edge | Iterable[Edge] | None' = None, mode: 'Mode' = <Mode.ADD>) -> 'Sketch'
+  # Sketch Operation: make_hull
+minimize(fun, x0, args=(), method=None, jac=None, hess=None, hessp=None, bounds=None, constraints=(), tol=None, callback=None, options=None)
+  # Minimization of scalar function of one or more variables.
+mirror(objects: build123d.topology.one_d.Edge | build123d.topology.one_d.Wire | build123d.topology.two_d.Face | build123d.topology.composite.Compound | build123d.topology.composite.Curve | build123d.topology.composite.Sketch | build123d.topology.composite.Part | collections.abc.Iterable[build123d.topology.one_d.Edge | build123d.topology.one_d.Wire | build123d.topology.two_d.Face | build123d.topology.composite.Compound | build123d.topology.composite.Curve | build123d.topology.composite.Sketch | build123d.topology.composite.Part] | None = None, about: build123d.geometry.Plane = Plane(o=(0.00, 0.00, 0.00), x=(1.00, 0.00, 0.00), z=(0.00, -1.00, 0.00)), mode: build123d.build_enums.Mode = <Mode.ADD>) -> build123d.topology.composite.Curve | build123d.topology.composite.Sketch | build123d.topology.composite.Part | build123d.topology.composite.Compound
+  # Generic Operation: mirror
+modify_copyreg()
+  # Modify the copyreg so that pickle knows what to look for when it tries to pickle an OCP Shape
+new_edges(*objects: 'Shape', combined: 'Shape') -> 'ShapeList[Edge]'
+  # new_edges
+offset(objects: build123d.topology.one_d.Edge | build123d.topology.two_d.Face | build123d.topology.three_d.Solid | build123d.topology.composite.Compound | collections.abc.Iterable[build123d.topology.one_d.Edge | build123d.topology.two_d.Face | build123d.topology.three_d.Solid | build123d.topology.composite.Compound] | None = None, amount: float = 0, openings: build123d.topology.two_d.Face | list[build123d.topology.two_d.Face] | None = None, kind: build123d.build_enums.Kind = <Kind.ARC>, side: build123d.build_enums.Side = <Side.BOTH>, closed: bool = True, min_edge_length: float | None = None, mode: build123d.build_enums.Mode = <Mode.REPLACE>) -> build123d.topology.composite.Curve | build123d.topology.composite.Sketch | build123d.topology.composite.Part | build123d.topology.composite.Compound
+  # Generic Operation: offset
+offset_topods_face(face: 'TopoDS_Face', amount: 'float') -> 'TopoDS_Shape'
+  # Offset a topods_face
+overload(func)
+  # Decorator for overloaded functions/methods.
+pack(objects: 'Collection[Shape]', padding: 'float', align_z: 'bool' = False) -> 'Collection[Shape]'
+  # Pack objects in a squarish area in Plane.XY.
+polar(length: 'float', angle: 'float') -> 'tuple[float, float]'
+  # Convert polar coordinates into cartesian coordinates
+project(objects: build123d.topology.one_d.Edge | build123d.topology.two_d.Face | build123d.topology.one_d.Wire | build123d.geometry.Vector | build123d.topology.zero_d.Vertex | collections.abc.Iterable[build123d.topology.one_d.Edge | build123d.topology.two_d.Face | build123d.topology.one_d.Wire | build123d.geometry.Vector | build123d.topology.zero_d.Vertex] | None = None, workplane: build123d.geometry.Plane | None = None, target: build123d.topology.three_d.Solid | build123d.topology.composite.Compound | build123d.topology.composite.Part | None = None, mode: build123d.build_enums.Mode = <Mode.ADD>) -> build123d.topology.composite.Curve | build123d.topology.composite.Sketch | build123d.topology.composite.Compound | build123d.topology.shape_core.ShapeList[build123d.geometry.Vector]
+  # Generic Operation: project
+project_workplane(origin: 'VectorLike | Vertex', x_dir: 'VectorLike | Vertex', projection_dir: 'VectorLike', distance: 'float') -> 'Plane'
+  # Part Operation: project_workplane
+revolve(profiles: 'Face | Iterable[Face] | None' = None, axis: 'Axis' = ((0.0, 0.0, 0.0),(0.0, 0.0, 1.0)), revolution_arc: 'float' = 360.0, clean: 'bool' = True, mode: 'Mode' = <Mode.ADD>) -> 'Part'
+  # Part Operation: Revolve
+scale(objects: build123d.topology.shape_core.Shape | collections.abc.Iterable[build123d.topology.shape_core.Shape] | None = None, by: float | tuple[float, float, float] = 1, mode: build123d.build_enums.Mode = <Mode.REPLACE>) -> build123d.topology.composite.Curve | build123d.topology.composite.Sketch | build123d.topology.composite.Part | build123d.topology.composite.Compound
+  # Generic Operation: scale
+section(obj: 'Part | None' = None, section_by: 'Plane | Iterable[Plane]' = Plane(o=(0.00, 0.00, 0.00), x=(1.00, 0.00, 0.00), z=(0.00, -1.00, 0.00)), height: 'float' = 0.0, clean: 'bool' = True, mode: 'Mode' = <Mode.PRIVATE>) -> 'Sketch'
+  # Part Operation: section
+solid(self, select: 'Select' = <Select.ALL>) -> 'Solid'
+  # Return Solid
+solids(self, select: 'Select' = <Select.ALL>) -> 'ShapeList[Solid]'
+  # Return Solids
+sort_wires_by_build_order(wire_list: 'list[Wire]') -> 'list[list[Wire]]'
+  # Tries to determine how wires should be combined into faces.
+split(objects: build123d.topology.one_d.Edge | build123d.topology.one_d.Wire | build123d.topology.two_d.Face | build123d.topology.three_d.Solid | collections.abc.Iterable[build123d.topology.one_d.Edge | build123d.topology.one_d.Wire | build123d.topology.two_d.Face | build123d.topology.three_d.Solid] | None = None, bisect_by: build123d.geometry.Plane | build123d.topology.two_d.Face | build123d.topology.two_d.Shell = Plane(o=(0.00, 0.00, 0.00), x=(1.00, 0.00, 0.00), z=(0.00, -1.00, 0.00)), keep: build123d.build_enums.Keep = <Keep.TOP>, mode: build123d.build_enums.Mode = <Mode.REPLACE>)
+  # Generic Operation: split
+svg2paths(svg_file_location, return_svg_attributes=False, convert_circles_to_paths=True, convert_ellipses_to_paths=True, convert_lines_to_paths=True, convert_polylines_to_paths=True, convert_polygons_to_paths=True, convert_rectangles_to_paths=True)
+  # Converts an SVG into a list of Path objects and attribute dictionaries.
+sweep(sections: build123d.topology.composite.Compound | build123d.topology.one_d.Edge | build123d.topology.one_d.Wire | build123d.topology.two_d.Face | build123d.topology.three_d.Solid | collections.abc.Iterable[build123d.topology.composite.Compound | build123d.topology.one_d.Edge | build123d.topology.one_d.Wire | build123d.topology.two_d.Face | build123d.topology.three_d.Solid] | None = None, path: build123d.topology.composite.Curve | build123d.topology.one_d.Edge | build123d.topology.one_d.Wire | collections.abc.Iterable[build123d.topology.one_d.Edge] | None = None, multisection: bool = False, is_frenet: bool = False, transition: build123d.build_enums.Transition = <Transition.TRANSFORMED>, normal: build123d.geometry.Vector | tuple[float, float] | tuple[float, float, float] | collections.abc.Sequence[float] | None = None, binormal: build123d.topology.one_d.Edge | build123d.topology.one_d.Wire | None = None, clean: bool = True, mode: build123d.build_enums.Mode = <Mode.ADD>) -> build123d.topology.composite.Part | build123d.topology.composite.Sketch
+  # Generic Operation: sweep
+thicken(to_thicken: 'Face | Sketch | None' = None, amount: 'float | None' = None, normal_override: 'VectorLike | None' = None, both: 'bool' = False, clean: 'bool' = True, mode: 'Mode' = <Mode.ADD>) -> 'Part'
+  # Part Operation: thicken
+to_align_offset(min_point: 'VectorLike', max_point: 'VectorLike', align: 'Align2DType | Align3DType', center: 'VectorLike | None' = None) -> 'Vector'
+  # Amount to move object to achieve the desired alignment
+topo_explore_common_vertex(edge1: 'Edge | TopoDS_Edge', edge2: 'Edge | TopoDS_Edge') -> 'Vertex | None'
+  # Given two edges, find the common vertex
+topo_explore_connected_edges(edge: 'Edge', parent: 'Shape | None' = None, continuity: 'ContinuityLevel' = <ContinuityLevel.C0: 0>) -> 'ShapeList[Edge]'
+  # Find edges connected to the given edge with at least the requested continuity.
+topo_explore_connected_faces(edge: 'Edge', parent: 'Shape | None' = None) -> 'list[TopoDS_Face]'
+  # Given an edge extracted from a Shape, return the topods_faces connected to it
+trace(lines: 'Curve | Edge | Wire | Iterable[Curve | Edge | Wire] | None' = None, line_width: 'float' = 1, mode: 'Mode' = <Mode.ADD>) -> 'Sketch'
+  # Sketch Operation: trace
+tuplify(obj: 'Any', dim: 'int') -> 'tuple | None'
+  # Create a size tuple
+unique(enumeration)
+  # Class decorator for enumerations ensuring unique member values.
+unit_conversion_scale(from_unit: build123d.build_enums.Unit, to_unit: build123d.build_enums.Unit) -> float
+  # Return the multiplicative conversion factor to go from from_unit to to_unit.
+unwrap_topods_compound(compound: 'TopoDS_Compound', fully: 'bool' = True) -> 'TopoDS_Compound | TopoDS_Shape'
+  # Strip unnecessary Compound wrappers
+validate_inputs(context: 'Builder | None', validating_class, objects: 'Iterable[Shape] | None' = None)
+  # A function to wrap the method when used outside of a Builder context
+vertex(self, select: 'Select' = <Select.ALL>) -> 'Vertex'
+  # Return Vertex
+vertices(self, select: 'Select' = <Select.ALL>) -> 'ShapeList[Vertex]'
+  # Return Vertices
+wire(self, select: 'Select' = <Select.ALL>) -> 'Wire'
+  # Return Wire
+wires(self, select: 'Select' = <Select.ALL>) -> 'ShapeList[Wire]'
+  # Return Wires
+
+## Location Helpers
+
+GridLocations(x_spacing: 'float', y_spacing: 'float', x_count: 'int', y_count: 'int', align: 'Align | tuple[Align, Align]' = (<Align.CENTER>, <Align.CENTER>))
+  # Location Context: Rectangular Array
+HexLocations(radius: 'float', x_count: 'int', y_count: 'int', major_radius: 'bool' = False, align: 'Align | tuple[Align, Align]' = (<Align.CENTER>, <Align.CENTER>))
+  # Location Context: Hex Array
+Location(*args, **kwargs)
+  # Location in 3D space. Depending on usage can be absolute or relative.
+LocationEncoder(*, skipkeys=False, ensure_ascii=True, check_circular=True, allow_nan=True, sort_keys=False, indent=None, separators=None, default=None)
+  # Custom JSON Encoder for Location values
+LocationList(locations: 'list[Location]')
+  # Location Context
+Locations(*pts: 'VectorLike | Vertex | Location | Face | Plane | Axis | Iterable[VectorLike | Vertex | Location | Face | Plane | Axis]')
+  # Location Context: Push Points
+PolarLocations(radius: 'float', count: 'int', start_angle: 'float' = 0.0, angular_range: 'float' = 360.0, rotate: 'bool' = True, endpoint: 'bool' = False)
+  # Location Context: Polar Array
+TopLoc_Location()
+  # A Location is a composite transition. It comprises a series of elementary reference coordinates, i.e
+
+## Planes, Axes, Vectors
+
+Axis(*args, **kwargs)
+  # Axis
+Plane(*args, **kwargs)
+  # Plane
+Rotation(*args, **kwargs)
+  # Subclass of Location used only for object rotation
+Vector(*args, **kwargs)
+  # Create a 3-dimensional vector
+
+## Enums and Constants
+
+Align: MIN, CENTER, MAX, NONE
+GeomType: PLANE, CYLINDER, CONE, SPHERE, TORUS, BEZIER, BSPLINE, REVOLUTION, EXTRUSION, OFFSET
+Keep: ALL, BOTTOM, BOTH, INSIDE, OUTSIDE, TOP
+Kind: ARC, INTERSECTION, TANGENT
+Mode: ADD, SUBTRACT, INTERSECT, REPLACE, PRIVATE
+Select: ALL, LAST, NEW
+Side: LEFT, RIGHT, BOTH
+SortBy: LENGTH, RADIUS, AREA, VOLUME, DISTANCE
+Transition: RIGHT, ROUND, TRANSFORMED
+
+## Common Patterns
+
+### Semantic Selection (CRITICAL - Never use index-based selection)
+part.faces().sort_by(Axis.Z).last  # Top face
+part.edges().filter_by(Axis.Z)     # Vertical edges
+part.faces().filter_by(GeomType.PLANE)  # Flat faces
+part.edges().group_by(Axis.Z)[0]   # Bottom edge group
+
+### Builder Pattern
+with BuildPart() as part:
+    with BuildSketch(Plane.XY):
+        Rectangle(width, height, align=(Align.CENTER, Align.CENTER))
+    extrude(amount=depth)
+result = part.part
+
+### Alignment
+# Always use align parameter instead of manual centering math
+Rectangle(w, h, align=(Align.CENTER, Align.CENTER))
+Box(w, h, d, align=(Align.CENTER, Align.CENTER, Align.MIN))
+

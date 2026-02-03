@@ -1,0 +1,129 @@
+name: Build Installers
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+    tags:
+      - 'release'
+    paths-ignore:
+      - 'docs/**'
+      - '**/*.md'
+  pull_request:
+    branches:
+      - main
+      - develop
+    paths-ignore:
+      - 'docs/**'
+      - '**/*.md'
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests with coverage
+        run: npm run test:coverage
+
+      - name: Upload coverage artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage/
+          retention-days: 7
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          directory: ./coverage
+          fail_ci_if_error: false
+
+  build:
+    name: Build ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    needs: test
+    env:
+      # Ensure CI does not attempt to publish (applies to all steps in this job)
+      ELECTRON_BUILDER_PUBLISH: never
+    
+    strategy:
+      matrix:
+        include:
+          - os: windows-latest
+            platform: win
+            artifact: '*.exe'
+          - os: ubuntu-latest
+            platform: linux
+            artifact: '*.AppImage'
+          - os: macos-latest
+            platform: mac
+            artifact: '*.dmg'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Build application
+        run: npm run build
+      
+      - name: Package installer
+        run: npm run package:${{ matrix.platform }}
+        env:
+          # Disable code signing for now (can be enabled later with proper credentials)
+          CSC_IDENTITY_AUTO_DISCOVERY: false
+      
+      - name: List build artifacts
+        run: |
+          echo "Build output:"
+          ls -la dist-installer/
+        shell: bash
+      
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: torrify-${{ matrix.platform }}-${{ github.sha }}
+          path: |
+            dist-installer/${{ matrix.artifact }}
+          retention-days: 30
+      
+  smoke-test:
+    name: Smoke Test
+    needs: build
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Download Linux artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: torrify-linux-${{ github.sha }}
+      
+      - name: Verify AppImage
+        run: |
+          echo "Checking AppImage file..."
+          ls -lh *.AppImage
+          file *.AppImage
+          echo "AppImage verification complete"

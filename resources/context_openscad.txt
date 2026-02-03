@@ -1,0 +1,120 @@
+# OpenSCAD API Reference
+# Generated: 2026-01-25T05:02:41.167Z
+# Source: https://openscad.org/cheatsheet/
+
+## Special Variables
+- $fa
+- $fs
+- $fn
+- $vpr
+- $vpt
+- $vpd
+- $vpf
+- $children
+- $preview
+
+## 2D Primitives
+circle(r|d)
+square(size, center)
+polygon(points, paths)
+text(text, size, font, halign, valign, spacing, direction, language, script)
+
+## 3D Primitives
+sphere(r|d)
+cube(size, center)
+cylinder(h, r|d, r1|d1, r2|d2, center)
+polyhedron(points, faces, convexity)
+
+## Transformations
+translate(v)
+rotate(a, v)
+scale(v)
+resize(newsize, auto)
+mirror(v)
+multmatrix(m)
+color(c, alpha)
+offset(r|delta, chamfer)
+hull()
+minkowski()
+
+## Boolean Operations
+union()
+difference()
+intersection()
+
+## Modifiers
+* - disable
+! - show only
+# - highlight/debug
+% - transparent/background
+
+## Control Flow
+for (variable = [start : increment : end]) { ... }
+for (variable = [value1, value2, ...]) { ... }
+if (condition) { ... } else { ... }
+let (assignments) expression
+intersection_for(variable = [values]) { ... }
+
+## Mathematical Functions
+abs(x)
+sign(x)
+sin(x), cos(x), tan(x)
+asin(x), acos(x), atan(x), atan2(y, x)
+floor(x), ceil(x), round(x)
+ln(x), log(x), exp(x), pow(base, exp)
+sqrt(x)
+min(values), max(values)
+norm(v), cross(v1, v2)
+
+## String Functions
+str(values)
+chr(number)
+ord(string)
+len(string|array)
+search(match, string|array, num_returns, index_col)
+
+## Type Functions
+is_undef(x), is_bool(x), is_num(x), is_string(x), is_list(x), is_function(x)
+
+## List Operations
+concat(lists)
+lookup(value, table)
+
+## Special Variables
+$fa - minimum angle for circle fragments
+$fs - minimum size of circle fragments  
+$fn - number of circle fragments (overrides $fa and $fs)
+$t - animation time (0 to 1)
+$vpr - viewport rotation
+$vpt - viewport translation
+$vpd - viewport distance
+$vpf - viewport field of view
+$children - number of child modules
+$preview - true in preview mode, false when rendering
+
+## Modules
+module name(parameters) { ... }
+children()
+children(index)
+children([start : step : end])
+
+## Functions
+function name(parameters) = expression;
+
+## Import/Export
+import(file, convexity)
+surface(file, center, convexity)
+render(convexity)
+projection(cut)
+
+## Echo and Assert
+echo(values)
+assert(condition, message)
+
+## BOSL2 Library (Recommended)
+# If using BOSL2, prefer these patterns:
+include <BOSL2/std.scad>
+up(z), down(z), left(x), right(x), fwd(y), back(y)
+attach(anchor, spin, orient)
+position(anchor)
+reorient(anchor, spin, orient)
