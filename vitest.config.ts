@@ -18,6 +18,8 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],
+      // Only collect coverage for files executed in tests (avoids remapping crash on unused/generated code)
+      all: false,
       exclude: [
         'node_modules/',
         'src/test/',
@@ -25,6 +27,7 @@ export default defineConfig({
         '**/*.config.*',
         '**/dist/**',
         '**/dist-electron/**',
+        'electron/**',
       ],
     },
   },
