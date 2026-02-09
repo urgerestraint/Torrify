@@ -161,14 +161,14 @@ export const monarchLanguage = {
     '/',
     '%',
   ],
-  symbols: /[=><!~?:&|+\-*\/%\#]+/,
+  symbols: /[=><!~?:&|+\-*/%#]+/,
   escapes: /\\(?:[abfnrtv\\"']|x[0-9A-Fa-f]{1,4}|u[0-9A-Fa-f]{4})/,
   tokenizer: {
     root: [
       // Special variables: $fn, $fa, $fs, $t, $children, $preview
       [/\$[a-zA-Z_]\w*/, 'variable.predefined'],
       // Geometry modifiers at start: * ! # %
-      [/^[\s]*[\!\*\#\%](?=\s)/, 'keyword.operator.modifier'],
+      [/^[\s]*[!*#%](?=\s)/, 'keyword.operator.modifier'],
       // identifiers and keywords
       [
         /[a-zA-Z_]\w*/,
@@ -186,7 +186,7 @@ export const monarchLanguage = {
       // whitespace
       { include: '@whitespace' },
       // brackets
-      [/[{}()\[\]]/, '@brackets'],
+      [/[\]{}()[\]]/, '@brackets'],
       // operators
       [
         /@symbols/,
@@ -198,9 +198,9 @@ export const monarchLanguage = {
         },
       ],
       // numbers: floats, integers, scientific
-      [/\d*\.\d+([eE][\-+]?\d+)?/, 'number.float'],
-      [/\d+\.\d*([eE][\-+]?\d+)?/, 'number.float'],
-      [/\d+[eE][\-+]?\d+/, 'number.float'],
+      [/\d*\.\d+([eE][+-]?\d+)?/, 'number.float'],
+      [/\d+\.\d*([eE][+-]?\d+)?/, 'number.float'],
+      [/\d+[eE][+-]?\d+/, 'number.float'],
       [/\d+/, 'number'],
       // delimiter
       [/[;,.]/, 'delimiter'],
@@ -214,9 +214,9 @@ export const monarchLanguage = {
       [/\/\/.*$/, 'comment'],
     ],
     comment: [
-      [/[^\/*]+/, 'comment'],
+      [/[^/*]+/, 'comment'],
       [/\*\//, 'comment', '@pop'],
-      [/[\/*]/, 'comment'],
+      [/[/*]/, 'comment'],
     ],
     string: [
       [/[^\\"]+/, 'string'],

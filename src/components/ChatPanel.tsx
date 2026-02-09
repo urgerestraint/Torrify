@@ -494,7 +494,7 @@ ${pendingDiagnosis.code}
         onSnapshotsSent?.()
       }
     }
-  }, [currentCode, messages, onSnapshotsSent, onApplyCode, cadBackend, setMessages, apiContext, includeContext])
+  }, [currentCode, messages, onSnapshotsSent, cadBackend, setMessages, apiContext, includeContext])
 
   /**
    * Orchestrates sending a new user message.

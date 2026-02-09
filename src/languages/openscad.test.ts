@@ -159,7 +159,6 @@ describe('OpenSCAD language definition', () => {
 
     it('should include keywords and controlKeywords in monarch definition', () => {
       expect(monarchLanguage.keywords).toEqual([...keywords])
-      // @ts-ignore - controlKeywords exists in the object but types might not strictly infer it in the test check without casting
       expect(monarchLanguage.controlKeywords).toEqual([...controlKeywords])
     })
 
