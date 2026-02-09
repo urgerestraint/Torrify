@@ -293,7 +293,7 @@ If the demo grows beyond casual use, migrate to **Option B** (CF Worker) to remo
 
 ### What's Removed vs Desktop
 - No file open/save dialogs (replaced with download button)
-- No project files (.scadgpt persistence)
+- No project files (.torrify persistence)
 - No settings modal (or a very simplified one)
 - No build123d backend toggle
 - No menu bar (web toolbar only)

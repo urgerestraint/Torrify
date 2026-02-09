@@ -56,7 +56,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   /** Renders CAD code (OpenSCAD or build123d) to STL data */
   renderStl: (code: string) => ipcRenderer.invoke('render-stl', code),
   
-  /** Saves a project file (.scadgpt) to disk */
+  /** Saves a project file (.torrify) to disk */
   saveProject: (project: Project, currentFilePath?: string) =>
     ipcRenderer.invoke('save-project', project, currentFilePath),
     

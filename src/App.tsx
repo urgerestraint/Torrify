@@ -331,7 +331,7 @@ function App() {
 
   /**
    * Specialized handler for loading a specific file from the history.
-   * Supports both raw CAD files and .scadgpt project bundles.
+   * Supports both raw CAD files and .torrify project bundles.
    */
   const handleOpenRecentFile = useCallback(
     async (filePath: string) => {
@@ -440,7 +440,7 @@ function App() {
   }, [fileOps.handleOpenFile, fileOps.handleNewFile, fileOps.handleSaveAs, fileOps.handleSaveFile, fileOps.currentFilePath, fileOps])
 
   /**
-   * Persists the current IDE state (code + chat) into a .scadgpt project file.
+   * Persists the current IDE state (code + chat) into a .torrify project file.
    */
   const handleSaveProject = useCallback(async () => {
     const project = {
@@ -464,7 +464,7 @@ function App() {
   }, [code, stlBase64, messages, fileOps, loadRecentFiles])
 
   /**
-   * Restores a .scadgpt project from disk.
+   * Restores a .torrify project from disk.
    */
   const handleLoadProject = useCallback(async () => {
     try {

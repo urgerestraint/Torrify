@@ -28,7 +28,7 @@ export interface LLMConfig {
   readonly temperature?: number
   /** Maximum number of tokens to generate in the response */
   readonly maxTokens?: number
-  /** Gateway provider: base URL (e.g. https://api.scadgpt.com) */
+  /** Gateway provider: base URL (e.g. https://api.example.com) */
   readonly gatewayBaseUrl?: string
   /** Gateway provider: license key for X-License-Key header */
   readonly gatewayLicenseKey?: string

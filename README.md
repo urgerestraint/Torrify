@@ -4,7 +4,7 @@
   <img src="docs/assets/logo.png" alt="Torrify Logo" width="200" />
 </p>
 
-[![Build](https://github.com/caseyhartnett/SCADGPT/actions/workflows/build-installers.yml/badge.svg)](https://github.com/caseyhartnett/SCADGPT/actions/workflows/build-installers.yml) [![codecov](https://codecov.io/gh/caseyhartnett/SCADGPT/graph/badge.svg)](https://codecov.io/gh/caseyhartnett/SCADGPT)
+[![Build](https://github.com/caseyhartnett/torrify/actions/workflows/build-installers.yml/badge.svg)](https://github.com/caseyhartnett/torrify/actions/workflows/build-installers.yml) [![codecov](https://codecov.io/gh/caseyhartnett/torrify/graph/badge.svg)](https://codecov.io/gh/caseyhartnett/torrify)
 
 **An AI-assisted IDE for 3D CAD modeling** that bridges the gap between natural language and parametric design. Built with Electron, React, and TypeScript, Torrify supports OpenSCAD and build123d, allowing you to generate, edit, and visualize 3D models using simple chat commands or code.
 
