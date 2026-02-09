@@ -38,6 +38,9 @@
     "email": "hello@torrify.org",
     "url": "https://github.com/caseyhartnett/torrify/issues"
   },
+  "overrides": {
+    "esbuild": ">=0.25.0"
+  },
   "build": {
     "appId": "com.torrify.app",
     "productName": "Torrify",
