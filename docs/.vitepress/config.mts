@@ -3,9 +3,12 @@ import { defineConfig } from 'vitepress'
 export default defineConfig({
   title: "Torrify Docs",
   description: "Documentation for Torrify - AI-assisted CAD IDE",
+  base: '/docs/',
+  appearance: 'dark',
   themeConfig: {
     nav: [
-      { text: 'Home', link: '/' },
+      { text: 'Back to Torrify', link: 'https://torrify.org/' },
+      { text: 'Overview', link: '/' },
       { text: 'Getting Started', link: '/getting-started/' },
       { text: 'Features', link: '/features/' },
       { text: 'Developer', link: '/developer/' }

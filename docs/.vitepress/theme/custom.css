@@ -1,0 +1,72 @@
+/**
+ * VitePress Custom Theme
+ * Matches main site palette: Tailwind slate + indigo
+ */
+
+/**
+ * Colors: Dark mode overrides
+ * Match main site: slate-950 bg, slate-800 borders, slate-300 text, indigo-600/500 accents
+ */
+.dark {
+  /* Backgrounds */
+  --vp-c-bg: #020617; /* slate-950 */
+  --vp-c-bg-alt: #0f172a; /* slate-900 - sidebar */
+  --vp-c-bg-elv: #1e293b; /* slate-800 - elevated/floating */
+  --vp-c-bg-soft: #1e293b; /* slate-800 - subtle bg */
+
+  /* Borders & Dividers */
+  --vp-c-border: #334155; /* slate-700 */
+  --vp-c-divider: #1e293b; /* slate-800 */
+  --vp-c-gutter: #1e293b; /* slate-800 */
+
+  /* Text */
+  --vp-c-text-1: #f1f5f9; /* slate-100 - primary text */
+  --vp-c-text-2: #cbd5e1; /* slate-300 - secondary text */
+  --vp-c-text-3: #94a3b8; /* slate-400 - subtle text */
+
+  /* Brand / Accent colors (indigo) */
+  --vp-c-brand-1: #818cf8; /* indigo-400 - text links */
+  --vp-c-brand-2: #6366f1; /* indigo-500 - hover */
+  --vp-c-brand-3: #4f46e5; /* indigo-600 - solid bg */
+
+  /* Override indigo palette to match brand */
+  --vp-c-indigo-1: #818cf8;
+  --vp-c-indigo-2: #6366f1;
+  --vp-c-indigo-3: #4f46e5;
+  --vp-c-indigo-soft: rgba(99, 102, 241, 0.16);
+
+  /* Gray palette - used for default buttons, etc */
+  --vp-c-gray-1: #cbd5e1; /* slate-300 */
+  --vp-c-gray-2: #64748b; /* slate-500 */
+  --vp-c-gray-3: #475569; /* slate-600 */
+  --vp-c-gray-soft: rgba(148, 163, 184, 0.16);
+
+  /* Component: Nav */
+  --vp-nav-bg-color: rgba(2, 6, 23, 0.8); /* slate-950 at 80% - matches main header */
+
+  /* Component: Sidebar */
+  --vp-sidebar-bg-color: #0f172a; /* slate-900 */
+}
+
+/**
+ * Nav Bar: backdrop blur + border to match main site header
+ */
+.VPNav {
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.VPNavBar {
+  border-bottom: 1px solid rgba(30, 41, 59, 0.6); /* slate-800 at 60% opacity */
+}
+
+/**
+ * Optional: Ensure links have good contrast on dark bg
+ */
+.dark a {
+  color: var(--vp-c-brand-1);
+}
+
+.dark a:hover {
+  color: var(--vp-c-brand-2);
+}
