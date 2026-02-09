@@ -82,9 +82,9 @@ describe('useRecentFiles', () => {
     await act(() => {
       result.current.setIsRecentMenuOpen(true)
     })
-
-    act(() => {
-      result.current.handleRecentMenuKeyDown(keyEvent('ArrowDown'))
+    // Flush the auto-focus setTimeout(0) that fires when the menu opens
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 0))
     })
     expect(result.current.recentMenuFocusIndex).toBe(0)
 
@@ -92,6 +92,11 @@ describe('useRecentFiles', () => {
       result.current.handleRecentMenuKeyDown(keyEvent('ArrowDown'))
     })
     expect(result.current.recentMenuFocusIndex).toBe(1)
+
+    act(() => {
+      result.current.handleRecentMenuKeyDown(keyEvent('ArrowDown'))
+    })
+    expect(result.current.recentMenuFocusIndex).toBe(2)
   })
 
   it('handleRecentMenuKeyDown ArrowUp moves focus index', async () => {
@@ -104,6 +109,11 @@ describe('useRecentFiles', () => {
     await act(() => {
       result.current.setIsRecentMenuOpen(true)
     })
+    // Flush the auto-focus setTimeout(0) that fires when the menu opens
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 0))
+    })
+    expect(result.current.recentMenuFocusIndex).toBe(0)
 
     act(() => {
       result.current.handleRecentMenuKeyDown(keyEvent('ArrowUp'))
@@ -120,6 +130,10 @@ describe('useRecentFiles', () => {
     })
     await act(() => {
       result.current.setIsRecentMenuOpen(true)
+    })
+    // Flush the auto-focus setTimeout(0) that fires when the menu opens
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 0))
     })
 
     act(() => {

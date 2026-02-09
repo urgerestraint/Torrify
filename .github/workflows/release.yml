@@ -5,6 +5,10 @@ on:
     tags:
       - 'v*'
 
+# Default read-only; release job overrides with contents: write for publishing
+permissions:
+  contents: read
+
 jobs:
   release:
     name: Build & Release
