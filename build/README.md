@@ -4,43 +4,31 @@ This directory contains resources needed for building installers.
 
 ## Icons
 
-The application uses **logo.png** from the project root to generate app icons.
+The application uses **icon.png** in this directory (generated from **Torrify Icon.png** in the project root) for all platform installers.
 
-- **icon.png** – Linux AppImage icon (512×512, letterboxed from logo)
-- **icon.ico** – Windows installer icon (multi-size)
-- **icon.icns** – macOS installer icon (create separately; see below)
+- **icon.png** – Universal app icon (512×512 or larger) used for macOS DMG, Windows NSIS, and Linux AppImage
+- electron-builder accepts PNG for all platforms; no separate .ico or .icns required
 
-### Rectangular logo
+### In-app logo
 
-If **logo.png** is not square, the script **letterboxes** it: the logo is centered on a transparent square canvas so app icons (taskbar, dock) look correct. The in-app logo (header, modals) uses the original rectangular image from `public/logo.png`.
+The in-app logo (header, favicon, modals) is served from `public/logo.png`, which is a copy of Torrify Icon.png.
 
-### Generate icons from logo.png
+### Updating the icon
 
-1. Put **logo.png** in the project root (same folder as `package.json`).
-2. Install dependencies (one-time):
-   ```bash
-   npm install
-   ```
-   (The icon script uses `sharp` and `png-to-ico` from devDependencies.)
-3. Generate icons:
-   ```bash
-   npm run generate:icons
-   ```
-   This creates `build/icon.png`, `build/icon-16.png` … `build/icon-256.png`, and **build/icon.ico**.
+1. Replace **Torrify Icon.png** in the project root with your new icon (512×512 or larger recommended).
+2. Copy it to:
+   - `public/logo.png` (for app UI and favicon)
+   - `docs/assets/logo.png` (for README and docs)
+   - `build/icon.png` (for installers)
 
-### macOS .icns
+### Optional: Platform-specific icons
 
-The script does not create **icon.icns**. To get a macOS icon:
+For Windows `.ico` or macOS `.icns`:
 
-- **On macOS:** Use `iconutil` with a `.iconset` made from the PNGs, or use [png2icons](https://www.npmjs.com/package/png2icons).
-- **Elsewhere:** Convert `build/icon.png` to `.icns` at [convertio.co/png-icns](https://convertio.co/png-icns/) and save as `build/icon.icns`.
+- **Windows:** Convert `build/icon.png` to multi-size `.ico` (e.g. using [png-to-ico](https://www.npmjs.com/package/png-to-ico) or an online converter) and save as `build/icon.ico`.
+- **macOS:** On macOS, use `iconutil -c icns icon.iconset`; elsewhere convert at [convertio.co/png-icns](https://convertio.co/png-icns/) and save as `build/icon.icns`.
 
-### Manual icons
-
-To use your own icon files:
-
-1. Place **icon.png** (512×512 or 1024×1024), **icon.ico** (Windows), and optionally **icon.icns** (macOS) in this directory.
-2. Skip `npm run generate:icons`; the build will use these files.
+Then update `package.json` build config to use `build/icon.ico` for Windows and `build/icon.icns` for macOS.
 
 ### No icons (development)
 

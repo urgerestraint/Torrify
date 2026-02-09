@@ -41,8 +41,11 @@ dist-installer/
 
 # Build resources (keep icons and docs, ignore generated files)
 build/*.png
+!build/icon.png
 build/*.ico
+!build/icon.ico
 build/*.icns
+!build/icon.icns
 build/icon-*.png
 
 # Temp files
