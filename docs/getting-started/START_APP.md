@@ -1,4 +1,4 @@
-# How to Start Torrify (DEFINITIVE GUIDE)
+# Application Startup Guide
 
 ## Running the Installed Application
 
@@ -270,5 +270,3 @@ If all three work, you're good to go! 🎉
 ---
 
 **Last Updated:** January 24, 2026  
-**Status:** Official startup guide
-

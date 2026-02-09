@@ -103,7 +103,7 @@ function WelcomeModal({ isOpen, onClose, onOpenSettings }: WelcomeModalProps) {
                     Configure an API key to enable AI chat assistance. You can skip this and configure it later.
                   </p>
                   <p className="text-xs text-gray-500 mt-2">
-                    Supported providers: Google Gemini, OpenAI, Anthropic, or custom/local models
+                    Supported providers: Google Gemini, OpenAI, or custom/local models
                   </p>
                 </div>
                 {apiKeyConfigured ? (

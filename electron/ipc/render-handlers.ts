@@ -5,6 +5,7 @@ import { createCADService } from '../cad'
 import { CodeSchema } from '../validation/schemas'
 import { getCurrentSettings } from '../settings'
 import { TEMP_DIR, OPENSCAD_RENDER_CONFIG, OPENSCAD_TIMEOUT_MS, MAX_OUTPUT_FILE_SIZE } from '../constants'
+import { createCappedBuffer } from '../cad/process-utils'
 import { getErrorMessage } from '../utils/error'
 import { logger } from '../utils/logger'
 
@@ -60,11 +61,9 @@ export function registerRenderHandlers(): void {
           }
         }, OPENSCAD_TIMEOUT_MS)
 
-        let stderr = ''
+        const stderrBuf = createCappedBuffer()
         if (openscadProcess.stderr) {
-          openscadProcess.stderr.on('data', (data) => {
-            stderr += data.toString()
-          })
+          openscadProcess.stderr.on('data', (data) => stderrBuf.append(data))
         }
 
         openscadProcess.on('close', (exitCode) => {
@@ -93,7 +92,7 @@ export function registerRenderHandlers(): void {
               reject(new Error('Render output file not created'))
             }
           } else {
-            reject(new Error(`OpenSCAD exited with code ${exitCode}: ${stderr}`))
+            reject(new Error(`OpenSCAD exited with code ${exitCode}: ${stderrBuf.value}`))
           }
         })
 

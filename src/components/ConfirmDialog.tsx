@@ -1,17 +1,32 @@
 import { useEffect, useRef } from 'react'
 import type { KeyboardEvent as ReactKeyboardEvent, MouseEvent as ReactMouseEvent } from 'react'
 
+/**
+ * Props for the ConfirmDialog component.
+ */
 interface ConfirmDialogProps {
-  isOpen: boolean
-  title: string
-  message: string
-  confirmLabel?: string
-  cancelLabel?: string
-  showCancel?: boolean
-  onConfirm: () => void
-  onCancel?: () => void
+  /** Indicates if the dialog is visible */
+  readonly isOpen: boolean
+  /** The title text displayed at the top of the dialog */
+  readonly title: string
+  /** The descriptive message content */
+  readonly message: string
+  /** Label for the primary action button (defaults to 'OK') */
+  readonly confirmLabel?: string
+  /** Label for the secondary/dismiss button (defaults to 'Cancel') */
+  readonly cancelLabel?: string
+  /** If true, the secondary button is displayed */
+  readonly showCancel?: boolean
+  /** Triggered when the primary button is clicked */
+  readonly onConfirm: () => void
+  /** Triggered when the secondary button or backdrop is clicked */
+  readonly onCancel?: () => void
 }
 
+/**
+ * A modal dialog for critical confirmations or simple alerts.
+ * Implements accessible focus management, backdrop clicking, and keyboard navigation.
+ */
 function ConfirmDialog({
   isOpen,
   title,
@@ -26,9 +41,14 @@ function ConfirmDialog({
   const confirmButtonRef = useRef<HTMLButtonElement>(null)
   const previousFocusRef = useRef<HTMLElement | null>(null)
 
+  // Manage accessibility and focus lifecycle
   useEffect(() => {
     if (!isOpen) return
+    
+    // Store original focus to restore on close
     previousFocusRef.current = document.activeElement as HTMLElement
+    
+    // Defer focus to allow rendering to complete
     window.setTimeout(() => confirmButtonRef.current?.focus(), 0)
 
     return () => {
@@ -36,7 +56,11 @@ function ConfirmDialog({
     }
   }, [isOpen])
 
+  /**
+   * Handles keyboard interaction including focus trapping and Escape key closing.
+   */
   const handleKeyDown = (event: ReactKeyboardEvent<HTMLDivElement>) => {
+    // 1. Dismiss logic
     if (event.key === 'Escape') {
       event.stopPropagation()
       if (showCancel && onCancel) {
@@ -47,7 +71,9 @@ function ConfirmDialog({
       return
     }
 
+    // 2. Focus trapping (Tab cycling)
     if (event.key !== 'Tab') return
+    
     const focusable = dialogRef.current?.querySelectorAll<HTMLElement>(
       'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
     )
@@ -55,6 +81,7 @@ function ConfirmDialog({
 
     const first = focusable[0]
     const last = focusable[focusable.length - 1]
+    
     if (event.shiftKey && document.activeElement === first) {
       event.preventDefault()
       last.focus()
@@ -64,6 +91,9 @@ function ConfirmDialog({
     }
   }
 
+  /**
+   * Closes the dialog if the user clicks the dim backdrop.
+   */
   const handleBackdropMouseDown = (event: ReactMouseEvent<HTMLDivElement>) => {
     if (event.target !== event.currentTarget) return
     if (showCancel && onCancel) {

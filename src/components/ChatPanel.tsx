@@ -3,116 +3,190 @@ import { createLLMService, PROVIDER_NAMES, requiresApiKey, type LLMMessage, type
 import type { CADBackend } from '../services/cad'
 import { logger } from '../utils/logger'
 
+/**
+ * Represents a single message in the chat conversation.
+ */
 export interface Message {
+  /** Unique identifier for the message */
   id: number
+  /** The text content of the message */
   text: string
+  /** Whether the message was sent by the user or the AI bot */
   sender: 'user' | 'bot'
+  /** When the message was created */
   timestamp: Date
+  /** If true, the message represents an error state */
   error?: boolean
-  imageDataUrls?: string[]  // Images attached to this message
-  isStreaming?: boolean  // Whether this message is currently being streamed
+  /** Optional array of base64 image data URLs attached to this message */
+  readonly imageDataUrls?: string[]
+  /** Whether this message is currently being streamed from the LLM */
+  isStreaming?: boolean
 }
 
+/**
+ * Data required to diagnose a CAD rendering error.
+ */
 interface PendingDiagnosis {
+  /** The error message received from the CAD backend */
   error: string
+  /** The code that caused the error */
   code: string
 }
 
+/**
+ * Props for the ChatPanel component.
+ */
 interface ChatPanelProps {
+  /** Current code in the editor, used as context for the LLM */
   currentCode?: string
+  /** Array of image data URLs waiting to be sent with the next message */
   pendingSnapshots?: string[]
+  /** Callback triggered after snapshots have been successfully sent */
   onSnapshotsSent?: () => void
+  /** Callback to apply suggested code back to the main editor */
   onApplyCode?: (code: string) => void
+  /** Array of existing chat messages */
   messages: Message[]
+  /** State setter for updating the chat messages */
   setMessages: React.Dispatch<React.SetStateAction<Message[]>>
+  /** The currently active CAD backend (OpenSCAD or build123d) */
   cadBackend?: CADBackend
+  /** Optional diagnosis data if a render error just occurred */
   pendingDiagnosis?: PendingDiagnosis | null
+  /** Callback to clear the pending diagnosis state */
   onDiagnosisSent?: () => void
-  settingsVersion?: number // Increment this to trigger LLM status refresh
+  /** Version number of settings to trigger refreshes when configuration changes */
+  settingsVersion?: number
 }
 
-// Extract code from LLM response based on backend type
-const extractCodeFromResponse = (text: string, backend: CADBackend = 'openscad') => {
+/**
+ * Internal result type for code extraction.
+ */
+interface ExtractedCode {
+  /** The extracted CAD code, or null if no code was found */
+  code: string | null
+  /** The remaining text content of the message (the explanation) */
+  message: string
+}
+
+/**
+ * Strips specific XML-like tags used for CAD code blocks.
+ * 
+ * @param code - The raw code string potentially containing tags
+ * @param backend - The CAD backend type to determine which tags to strip
+ * @returns The cleaned code string
+ */
+const stripCodeTags = (code: string, backend: CADBackend): string => {
+  const tagPattern = backend === 'openscad'
+    ? /^\s*<\/?openscad>\s*$/gim
+    : /^\s*<\/?python>\s*$/gim
+  return code.replace(tagPattern, '').trim()
+}
+
+/**
+ * Extracts CAD code from a raw LLM response string.
+ * Supports both XML-style tags (<openscad>, <python>) and standard Markdown code fences.
+ * 
+ * @param text - The full response text from the LLM
+ * @param backend - The CAD backend being used (defaults to 'openscad')
+ * @returns An object containing the extracted code and the remaining message text
+ */
+const extractCodeFromResponse = (text: string, backend: CADBackend = 'openscad'): ExtractedCode => {
   const codeChunks: string[] = []
   let match: RegExpExecArray | null
 
-  if (backend === 'openscad') {
-    // OpenSCAD-specific extraction
-    const openscadTagRegex = /<openscad>([\s\S]*?)<\/openscad>/gi
-    while ((match = openscadTagRegex.exec(text)) !== null) {
+  // Use backend-specific tag and language identifier
+  const tagName = backend === 'openscad' ? 'openscad' : 'python'
+  const fenceLangs = backend === 'openscad' ? ['openscad', 'scad'] : ['python', 'py', 'build123d']
+  
+  const tagRegex = new RegExp(`<${tagName}>([\\s\\S]*?)<\\/${tagName}>`, 'gi')
+  
+  // 1. Try to extract from custom XML-style tags
+  while ((match = tagRegex.exec(text)) !== null) {
+    const chunk = match[1].trim()
+    if (chunk) {
+      codeChunks.push(chunk)
+    }
+  }
+
+  // Determine the descriptive part of the message (outside of tags)
+  const assistantMatch = text.match(/<assistant>([\s\S]*?)<\/assistant>/i)
+  let cleanedText = assistantMatch 
+    ? assistantMatch[1].trim() 
+    : text.replace(tagRegex, '').trim()
+
+  // 2. Fallback to standard Markdown triple-backtick fences if no tags found
+  if (codeChunks.length === 0) {
+    const langPattern = fenceLangs.join('|')
+    const fencedRegex = new RegExp(`\`\`\`(?:${langPattern})\\s*([\\s\\S]*?)\`\`\``, 'gi')
+    
+    while ((match = fencedRegex.exec(text)) !== null) {
       const chunk = match[1].trim()
       if (chunk) {
         codeChunks.push(chunk)
       }
     }
-
-    const assistantMatch = text.match(/<assistant>([\s\S]*?)<\/assistant>/i)
-    let cleanedText = assistantMatch ? assistantMatch[1].trim() : text.replace(openscadTagRegex, '').trim()
-
-    if (codeChunks.length === 0) {
-      const fencedRegex = /```(?:openscad|scad)\s*([\s\S]*?)```/gi
-      while ((match = fencedRegex.exec(text)) !== null) {
-        const chunk = match[1].trim()
-        if (chunk) {
-          codeChunks.push(chunk)
-        }
-      }
-      if (!assistantMatch) {
-        cleanedText = cleanedText.replace(fencedRegex, '').trim()
-      }
+    
+    if (!assistantMatch) {
+      cleanedText = cleanedText.replace(fencedRegex, '').trim()
     }
+  }
 
-    const combinedCode = codeChunks.length > 0 ? `${codeChunks.join('\n\n')}\n` : null
-    return {
-      code: combinedCode,
-      message: cleanedText,
-    }
-  } else {
-    // build123d / Python extraction
-    const pythonTagRegex = /<python>([\s\S]*?)<\/python>/gi
-    while ((match = pythonTagRegex.exec(text)) !== null) {
-      const chunk = match[1].trim()
-      if (chunk) {
-        codeChunks.push(chunk)
+  // 3. Fallback for truncated responses (handle opening tag with no closing tag)
+  if (codeChunks.length === 0 && new RegExp(`<${tagName}>`, 'i').test(text)) {
+    const truncatedMatch = text.match(new RegExp(`<${tagName}>([\\s\\S]*)`, 'i'))
+    if (truncatedMatch && truncatedMatch[1].trim()) {
+      const cleaned = stripCodeTags(truncatedMatch[1], backend)
+      if (cleaned) {
+        codeChunks.push(cleaned)
+        logger.debug(`[ChatPanel] Extracted code from truncated response (no closing </${tagName}>)`, { 
+          length: cleaned.length 
+        })
       }
     }
+  }
 
-    const assistantMatch = text.match(/<assistant>([\s\S]*?)<\/assistant>/i)
-    let cleanedText = assistantMatch ? assistantMatch[1].trim() : text.replace(pythonTagRegex, '').trim()
-
-    if (codeChunks.length === 0) {
-      const fencedRegex = /```(?:python|py|build123d)\s*([\s\S]*?)```/gi
-      while ((match = fencedRegex.exec(text)) !== null) {
-        const chunk = match[1].trim()
-        if (chunk) {
-          codeChunks.push(chunk)
-        }
-      }
-      if (!assistantMatch) {
-        cleanedText = cleanedText.replace(fencedRegex, '').trim()
-      }
-    }
-
-    const combinedCode = codeChunks.length > 0 ? `${codeChunks.join('\n\n')}\n` : null
-    return {
-      code: combinedCode,
-      message: cleanedText,
-    }
+  const combinedCode = codeChunks.length > 0 ? `${codeChunks.join('\n\n')}\n` : null
+  
+  return {
+    code: combinedCode,
+    message: cleanedText,
   }
 }
 
-function ChatPanel({ currentCode, pendingSnapshots, onSnapshotsSent, onApplyCode, messages, setMessages, cadBackend = 'openscad', pendingDiagnosis, onDiagnosisSent, settingsVersion = 0 }: ChatPanelProps) {
+/**
+ * The ChatPanel component provides a conversational interface for interacting with the AI.
+ * It handles message history, image attachments, streaming responses, and code extraction.
+ * 
+ * @param props - Component properties (see ChatPanelProps)
+ * @returns The rendered chat interface
+ */
+function ChatPanel({ 
+  currentCode, 
+  pendingSnapshots, 
+  onSnapshotsSent, 
+  onApplyCode, 
+  messages, 
+  setMessages, 
+  cadBackend = 'openscad', 
+  pendingDiagnosis, 
+  onDiagnosisSent, 
+  settingsVersion = 0 
+}: ChatPanelProps) {
   const [input, setInput] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [isStreaming, setIsStreaming] = useState(false)
   const [llmStatus, setLlmStatus] = useState<string>('Loading...')
   const [codeAppliedAt, setCodeAppliedAt] = useState<number | null>(null)
   const [apiContext, setApiContext] = useState<string | undefined>(undefined)
+  const [includeContext, setIncludeContext] = useState(true)
   const [stagedImages, setStagedImages] = useState<string[]>([])
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const streamControllerRef = useRef<StreamController | null>(null)
   const streamingMessageIdRef = useRef<number | null>(null)
+  const onApplyCodeRef = useRef(onApplyCode)
+  onApplyCodeRef.current = onApplyCode
 
   // Handle file selection for image import
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -141,14 +215,19 @@ function ChatPanel({ currentCode, pendingSnapshots, onSnapshotsSent, onApplyCode
     setStagedImages(prev => prev.filter((_, i) => i !== index))
   }
 
+  /**
+   * Triggers a smooth scroll to the bottom of the chat history.
+   */
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }
 
+  // Scroll to bottom whenever messages list updates
   useEffect(() => {
     scrollToBottom()
   }, [messages])
 
+  // Clear the "Code applied" success message after a delay
   useEffect(() => {
     if (!codeAppliedAt) {
       return
@@ -161,12 +240,15 @@ function ChatPanel({ currentCode, pendingSnapshots, onSnapshotsSent, onApplyCode
     return () => window.clearTimeout(timer)
   }, [codeAppliedAt])
 
+  // Load provider status (e.g. "Google Gemini (gemini-3-flash)") on mount and settings change
   useEffect(() => {
-    // Load LLM status on mount and when settings change
     loadLLMStatus()
   }, [settingsVersion])
 
-  // Load API context for the current backend
+  /**
+   * Fetches and parses the API context (help/reference docs) for the current backend.
+   * This context is injected into LLM prompts to improve code generation accuracy.
+   */
   useEffect(() => {
     const loadContext = async () => {
       try {
@@ -184,14 +266,16 @@ function ChatPanel({ currentCode, pendingSnapshots, onSnapshotsSent, onApplyCode
     loadContext()
   }, [cadBackend])
 
-  // Handle pending error diagnosis
+  /**
+   * Automatically handles error diagnosis when the main process reports a render failure.
+   * Prepares a diagnostic prompt containing the error message and the offending code.
+   */
   useEffect(() => {
     if (pendingDiagnosis && !isLoading) {
       const processDiagnosis = async () => {
         const backendName = cadBackend === 'build123d' ? 'build123d (Python)' : 'OpenSCAD'
         const codeBlockLang = cadBackend === 'build123d' ? 'python' : 'openscad'
         
-        // Create a diagnostic prompt
         const diagnosisText = `I got this error when trying to render my ${backendName} code. Please help me understand and fix the error.
 
 **Error:**
@@ -204,7 +288,6 @@ ${pendingDiagnosis.error}
 ${pendingDiagnosis.code}
 \`\`\``
 
-        // Add user message
         const userMessage: Message = {
           id: Date.now(),
           text: diagnosisText,
@@ -213,18 +296,19 @@ ${pendingDiagnosis.code}
         }
         setMessages(prev => [...prev, userMessage])
         
-        // Clear the pending diagnosis
         onDiagnosisSent?.()
         
-        // Send to LLM
         await sendToLlm(diagnosisText)
       }
       
       processDiagnosis()
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- sendToLlm is from useCallback below; effect only runs when pendingDiagnosis changes
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pendingDiagnosis, isLoading, cadBackend, onDiagnosisSent, setMessages])
 
+  /**
+   * Refreshes the display status of the AI provider based on current user settings.
+   */
   const loadLLMStatus = async () => {
     try {
       const settings = await window.electronAPI.getSettings()
@@ -236,8 +320,8 @@ ${pendingDiagnosis.code}
             setLlmStatus('PRO License Key Required - Configure in Settings')
           }
         } else if (settings.llm.provider === 'openrouter') {
-          const key = await window.electronAPI.getOpenRouterKey()
-          if (key) {
+          const configured = await window.electronAPI.getOpenRouterConfigured()
+          if (configured) {
             setLlmStatus(`${PROVIDER_NAMES[settings.llm.provider]} (${settings.llm.model})`)
           } else {
             setLlmStatus('OpenRouter API Key Required - Set OPENROUTER_API_KEY in environment')
@@ -257,52 +341,53 @@ ${pendingDiagnosis.code}
     }
   }
 
+  /**
+   * Main communication loop with the LLM. 
+   * Handles both streaming and non-streaming providers.
+   * 
+   * @param userInput - The text message from the user
+   * @param imageDataUrls - Optional array of images to include in the multi-modal prompt
+   */
   const sendToLlm = useCallback(async (userInput: string, imageDataUrls?: string[]) => {
     try {
-      // Get settings for LLM config
       const settings = await window.electronAPI.getSettings()
       
       if (!settings.llm.enabled) {
         throw new Error('AI is disabled. Enable it in Settings.')
       }
 
-      // Check provider-specific requirements
+      // Validate provider configuration before attempt
       if (settings.llm.provider === 'gateway') {
         if (!settings.llm.gatewayLicenseKey?.trim()) {
           throw new Error('PRO license key not configured. Add it in Settings.')
         }
       } else if (settings.llm.provider === 'openrouter') {
-        const key = await window.electronAPI.getOpenRouterKey()
-        if (!key) {
+        const configured = await window.electronAPI.getOpenRouterConfigured()
+        if (!configured) {
           throw new Error('OpenRouter API key not configured. Set OPENROUTER_API_KEY in environment.')
         }
       } else if (requiresApiKey(settings.llm.provider) && !settings.llm.apiKey?.trim()) {
-        // Debug logging to help diagnose provider value issues
         logger.debug('LLM Provider:', settings.llm.provider, 'Has API Key:', !!settings.llm.apiKey?.trim())
         throw new Error('API key not configured. Please add it in Settings.')
       }
 
-      // Create LLM service
       const llmService = createLLMService(settings.llm)
 
-      // Build conversation history
+      // Transform chat history into LLM-compatible message format
       const llmMessages: LLMMessage[] = messages
-        .filter(m => !m.error && !m.isStreaming) // Exclude error and streaming messages
+        .filter(m => !m.error && !m.isStreaming)
         .map(m => ({
           role: m.sender === 'user' ? 'user' : 'assistant',
           content: m.text
         }))
 
-      // Add current user message
       llmMessages.push({
         role: 'user',
         content: userInput,
         imageDataUrls
       })
 
-      // Check if streaming is supported and streamMessage is available
       if (llmService.supportsStreaming() && llmService.streamMessage) {
-        // Create a placeholder bot message for streaming
         const streamingMessageId = Date.now() + 1
         streamingMessageIdRef.current = streamingMessageId
         
@@ -316,23 +401,25 @@ ${pendingDiagnosis.code}
         setMessages(prev => [...prev, streamingMessage])
         setIsStreaming(true)
 
-        // Start streaming
         const controller = await llmService.streamMessage(
           llmMessages,
           (_chunk, accumulated, done) => {
             if (done) {
-              // Streaming complete - finalize the message
               setIsStreaming(false)
               streamControllerRef.current = null
-              
-              // Process the complete response for code extraction
+
+              logger.debug('[ChatPanel] Stream complete', {
+                accumulatedLength: accumulated?.length ?? 0
+              })
+
               const extracted = extractCodeFromResponse(accumulated, cadBackend)
               if (extracted.code) {
-                onApplyCode?.(extracted.code)
+                logger.debug('[ChatPanel] Applying extracted code to editor')
+                onApplyCodeRef.current?.(extracted.code)
                 setCodeAppliedAt(Date.now())
               }
-              
-              // Update the final message
+
+              // Finalize the streaming message with cleaned text (explanation only)
               setMessages(prev => prev.map(m => 
                 m.id === streamingMessageId 
                   ? { ...m, text: extracted.message || accumulated, isStreaming: false }
@@ -344,7 +431,7 @@ ${pendingDiagnosis.code}
                 onSnapshotsSent?.()
               }
             } else {
-              // Update the streaming message with new content
+              // Update UI with partial response
               setMessages(prev => prev.map(m => 
                 m.id === streamingMessageId 
                   ? { ...m, text: accumulated }
@@ -354,17 +441,22 @@ ${pendingDiagnosis.code}
           },
           currentCode,
           cadBackend,
-          apiContext
+          includeContext ? apiContext : undefined
         )
         
         streamControllerRef.current = controller
       } else {
-        // Fallback to non-streaming
-        const response = await llmService.sendMessage(llmMessages, currentCode, cadBackend, apiContext)
+        // Handle non-streaming providers (e.g. standard API calls)
+        const response = await llmService.sendMessage(
+          llmMessages, 
+          currentCode, 
+          cadBackend, 
+          includeContext ? apiContext : undefined
+        )
 
         const extracted = extractCodeFromResponse(response.content, cadBackend)
         if (extracted.code) {
-          onApplyCode?.(extracted.code)
+          onApplyCodeRef.current?.(extracted.code)
           setCodeAppliedAt(Date.now())
         }
 
@@ -385,7 +477,7 @@ ${pendingDiagnosis.code}
       }
 
     } catch (error: unknown) {
-      logger.error('LLM error', error)
+      logger.error('LLM communication error', error)
       const errorText = error instanceof Error ? error.message : 'Failed to get AI response'
       const errorMessage: Message = {
         id: Date.now() + 1,
@@ -402,8 +494,12 @@ ${pendingDiagnosis.code}
         onSnapshotsSent?.()
       }
     }
-  }, [currentCode, messages, onSnapshotsSent, onApplyCode, cadBackend, setMessages, apiContext])
+  }, [currentCode, messages, onSnapshotsSent, onApplyCode, cadBackend, setMessages, apiContext, includeContext])
 
+  /**
+   * Orchestrates sending a new user message.
+   * Collects staged images, adds message to history, and triggers LLM call.
+   */
   const handleSend = async () => {
     if (!input.trim() || isLoading) return
 
@@ -411,11 +507,9 @@ ${pendingDiagnosis.code}
     setInput('')
     setIsLoading(true)
 
-    // Combine staged images with pending snapshots
     const allImages = [...(pendingSnapshots || []), ...stagedImages]
     const hasImages = allImages.length > 0
 
-    // Add user message with images
     const userMessage: Message = {
       id: Date.now(),
       text: userInput,
@@ -425,27 +519,20 @@ ${pendingDiagnosis.code}
     }
 
     setMessages(prev => [...prev, userMessage])
-    
-    // Clear staged images after adding to message
     setStagedImages([])
     
     await sendToLlm(userInput, hasImages ? allImages : undefined)
   }
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault()
-      handleSend()
-    }
-  }
-
+  /**
+   * Terminates an active streaming request via the AbortController.
+   */
   const handleStopStreaming = useCallback(() => {
     if (streamControllerRef.current) {
       streamControllerRef.current.abort()
       streamControllerRef.current = null
     }
     
-    // Finalize any streaming message
     if (streamingMessageIdRef.current) {
       setMessages(prev => prev.map(m => 
         m.id === streamingMessageIdRef.current 
@@ -458,6 +545,19 @@ ${pendingDiagnosis.code}
     setIsStreaming(false)
     setIsLoading(false)
   }, [setMessages])
+
+  /**
+   * Handles keyboard shortcuts for the message textarea.
+   * Sends the message on Enter (without Shift).
+   * 
+   * @param e - Keyboard event
+   */
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault()
+      handleSend()
+    }
+  }
 
   // Cleanup on unmount
   useEffect(() => {
@@ -577,6 +677,18 @@ ${pendingDiagnosis.code}
           onChange={handleFileSelect}
           className="hidden"
         />
+        
+        <div className="flex justify-end mb-2 px-1">
+          <label className="flex items-center gap-2 text-xs text-gray-400 cursor-pointer hover:text-gray-300 select-none">
+            <input
+              type="checkbox"
+              checked={includeContext}
+              onChange={(e) => setIncludeContext(e.target.checked)}
+              className="rounded bg-[#2d2d30] border-[#3e3e42] text-blue-600 focus:ring-0 focus:ring-offset-0 w-3 h-3"
+            />
+            <span>Include API Context {cadBackend === 'build123d' ? '(~27KB)' : '(~2.5KB)'}</span>
+          </label>
+        </div>
         
         <div className="flex gap-2">
           <button

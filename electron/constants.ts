@@ -18,7 +18,8 @@ export const OPENSCAD_RENDER_CONFIG = {
 }
 
 export const OPENSCAD_TIMEOUT_MS = 30000
-export const MAX_OUTPUT_FILE_SIZE = 50 * 1024 * 1024 // 50MB
+export const MAX_OUTPUT_FILE_SIZE = 250 * 1024 * 1024 // 250MB (covers complex/SVG-derived STLs; 1GB would strain memory when base64-decoded)
+export const MAX_PROCESS_BUFFER_SIZE = 1 * 1024 * 1024 // 1MB for stderr/stdout
 export const MAX_PROJECT_FILE_SIZE = 100 * 1024 * 1024 // 100MB
 export const MAX_RECENT_FILES = 10
 export const MAX_SCAD_FILE_SIZE = 10 * 1024 * 1024 // 10MB

@@ -226,7 +226,7 @@ src/services/llm/
 {
   "llm": {
     "provider": "gemini",
-    "model": "gemini-2.0-flash-exp",
+    "model": "gemini-3-flash",
     "apiKey": "YOUR_KEY",
     "enabled": true,
     "temperature": 0.7,
@@ -270,7 +270,7 @@ AI Configuration:
   [x] Enable AI Assistant
 
   Provider: [Google Gemini ▼]
-  Model: gemini-2.0-flash-exp
+  Model: gemini-3-flash
   API Key: ••••••••••••••••••••
   
   Temperature: 0.7

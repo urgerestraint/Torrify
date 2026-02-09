@@ -19,7 +19,12 @@ vi.mock('electron', () => ({
       handlers[channel] = fn
     })
   },
-  dialog: mockDialog
+  dialog: mockDialog,
+  app: {
+    getPath: vi.fn((name: string) =>
+      name === 'documents' ? path.join(os.homedir(), 'Documents') : os.tmpdir()
+    )
+  }
 }))
 
 vi.mock('fs')
@@ -135,7 +140,7 @@ describe('project-handlers', () => {
       const result = await (handlers['load-project'] as (...a: unknown[]) => Promise<unknown>)(
         null
       )
-      expect(result).toEqual({ canceled: true, error: 'Invalid project file format' })
+      expect(result).toEqual({ canceled: true, error: 'The selected file is not a valid Torrify project' })
     })
   })
 })

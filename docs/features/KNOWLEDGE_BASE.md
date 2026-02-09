@@ -70,6 +70,36 @@ npm run generate:context:openscad
 npm run generate:context:build123d
 ```
 
+### Optional: Condense with LLM (Lower Token Use)
+
+To reduce context size and save money on LLM tokens, you can run the generator with an **LLM condense step**. The script will generate raw context as usual, then call an LLM (OpenRouter or Gemini) to produce a denser "Context Guide" (build123d) or "Syntax Context" (OpenSCAD) with the same semantic value and ~60% fewer characters.
+
+**Preferred: OpenRouter** (uses the same key as in the app)
+
+1. Set `OPENROUTER_API_KEY` in your environment (same as in the app):
+   - **Windows (PowerShell):** `$env:OPENROUTER_API_KEY = "your-api-key"`
+   - **macOS/Linux:** `export OPENROUTER_API_KEY=your-api-key`
+2. Optionally set the model (default is `google/gemini-2.0-flash`):
+   - `$env:OPENROUTER_MODEL = "google/gemini-2.0-flash"` (PowerShell) or `export OPENROUTER_MODEL=google/gemini-2.0-flash` (bash)
+3. Run the generator. If `OPENROUTER_API_KEY` is set, the script will condense each context file after generating it:
+   ```bash
+   npm run generate:context
+   ```
+
+**Alternative: Gemini** (direct Google API)
+
+1. Set `GEMINI_API_KEY` (from [Google AI Studio](https://makersuite.google.com/app/apikey)):
+   - **Windows (PowerShell):** `$env:GEMINI_API_KEY = "your-api-key"`
+   - **macOS/Linux:** `export GEMINI_API_KEY=your-api-key`
+2. Optionally set `GEMINI_MODEL` (e.g. `gemini-2.0-flash` or `gemini-3-flash`).
+
+**Skip condense:** To regenerate raw context only (skip the LLM step even if a key is set):
+   ```bash
+   npm run generate:context -- --no-gemini
+   ```
+
+Condensed output is written over the same `context_openscad.txt` and `context_build123d.txt` files. Use `--no-gemini` when you want to keep the raw scrape/introspection output.
+
 ## Files Involved
 
 - `scripts/generate-context.cjs`

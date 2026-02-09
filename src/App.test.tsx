@@ -9,8 +9,8 @@ describe('App', () => {
     // Check for Chat Panel
     expect(screen.getByText('AI Assistant')).toBeInTheDocument()
     
-    // Check for Editor Panel
-    expect(screen.getByText('Code Editor')).toBeInTheDocument()
+    // Check for Editor Panel (Code tab)
+    expect(screen.getByText('Code')).toBeInTheDocument()
     
     // Check for Preview Panel
     expect(screen.getByText('Render Preview')).toBeInTheDocument()
@@ -20,7 +20,7 @@ describe('App', () => {
     render(<App />)
     
     // Check for initial preview message
-    expect(screen.getByText('No preview yet')).toBeInTheDocument()
+    expect(screen.getByText('No model preview generated')).toBeInTheDocument()
     
     // Check for render button
     expect(screen.getByRole('button', { name: /render/i })).toBeInTheDocument()

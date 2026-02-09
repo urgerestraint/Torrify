@@ -1,59 +1,53 @@
-// LLM Service Factory
+/**
+ * LLM Service Factory and Provider Configuration.
+ * 
+ * In the renderer process, this factory creates a proxy that communicates 
+ * with the Electron main process via IPC.
+ */
 
 import type { LLMService, LLMConfig, LLMProvider } from './types'
-import { GeminiService } from './GeminiService'
-import { OpenRouterService } from './OpenRouterService'
-import { OllamaService } from './OllamaService'
-import { GatewayService } from './GatewayService'
+import { LLMProxy } from './LLMProxy'
 
 export * from './types'
 
-const PROVIDERS_WITHOUT_API_KEY: LLMProvider[] = ['openrouter', 'ollama', 'custom', 'gateway']
+/**
+ * List of providers that do not require an API key to be set manually in the 
+ * application settings (e.g. handled by environment variables or local services).
+ */
+const PROVIDERS_WITHOUT_API_KEY: readonly LLMProvider[] = [
+  'openrouter', 
+  'ollama', 
+  'custom', 
+  'gateway'
+] as const
 
+/**
+ * Determines if a given provider requires a manual API key configuration.
+ * 
+ * @param provider - The LLM provider to check
+ * @returns True if the provider requires an API key in the settings
+ */
 export const requiresApiKey = (provider: LLMProvider): boolean =>
   !PROVIDERS_WITHOUT_API_KEY.includes(provider)
 
+/**
+ * Factory function to create an LLM service instance.
+ * 
+ * @param config - The current LLM configuration
+ * @throws {Error} If the AI features are not enabled in the configuration
+ * @returns An implementation of LLMService (currently always returns LLMProxy)
+ */
 export function createLLMService(config: LLMConfig): LLMService {
   if (!config.enabled) {
     throw new Error('LLM is not enabled')
   }
-
-  if (!config.apiKey && requiresApiKey(config.provider)) {
-    throw new Error('API key is required')
-  }
-
-  switch (config.provider) {
-    case 'gemini':
-      return new GeminiService(config)
-    
-    case 'openai':
-      // TODO: Implement OpenAI service
-      throw new Error('OpenAI provider not yet implemented')
-    
-    case 'anthropic':
-      // TODO: Implement Anthropic service
-      throw new Error('Anthropic provider not yet implemented')
-    
-    case 'custom':
-      // TODO: Implement custom provider (for local models)
-      throw new Error('Custom provider not yet implemented')
-
-    case 'openrouter':
-      return new OpenRouterService(config)
-
-    case 'gateway':
-      return new GatewayService(config)
-    
-    case 'ollama':
-      return new OllamaService(config)
-    
-    default:
-      throw new Error(`Unknown LLM provider: ${config.provider}`)
-  }
+  return new LLMProxy()
 }
 
-// Provider display names (gateway = PRO tier, openrouter = BYOK)
-export const PROVIDER_NAMES: Record<string, string> = {
+/**
+ * Human-readable display names for supported LLM providers.
+ */
+export const PROVIDER_NAMES: Readonly<Record<LLMProvider, string>> = {
   gemini: 'Google Gemini',
   openai: 'OpenAI (GPT)',
   anthropic: 'Anthropic (Claude)',
@@ -61,15 +55,17 @@ export const PROVIDER_NAMES: Record<string, string> = {
   openrouter: 'OpenRouter',
   ollama: 'Ollama (Local)',
   gateway: 'PRO'
-}
+} as const
 
-// Default models for each provider
-export const DEFAULT_MODELS: Record<string, string> = {
-  gemini: 'gemini-2.0-flash-exp',
-  openai: 'gpt-4-turbo-preview',
+/**
+ * Default model identifiers recommended for each provider.
+ */
+export const DEFAULT_MODELS: Readonly<Record<LLMProvider, string>> = {
+  gemini: 'gemini-3-flash',
+  openai: 'gpt-5.2',
   anthropic: 'claude-3-5-sonnet-20241022',
   custom: '',
   openrouter: 'anthropic/claude-3.7-sonnet:thinking',
   gateway: 'openai/gpt-4o-mini',
-  ollama: 'gpt-oss:20b' // Default to a common model, user can change
-}
+  ollama: 'gpt-oss:20b'
+} as const

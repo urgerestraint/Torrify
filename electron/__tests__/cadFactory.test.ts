@@ -9,7 +9,7 @@ describe('createCADService', () => {
     })
     expect(service.getBackendName()).toBe('OpenSCAD')
     expect(service.getFileExtension()).toBe('scad')
-    expect(service.getLanguage()).toBe('c')
+    expect(service.getLanguage()).toBe('scad')
   })
 
   it('creates Build123dService for build123d backend', () => {
@@ -25,7 +25,7 @@ describe('createCADService', () => {
   it('throws when openscad backend has no path', () => {
     expect(() =>
       createCADService({ backend: 'openscad' })
-    ).toThrow('OpenSCAD path is required')
+    ).toThrow('OpenSCAD executable path is not configured')
   })
 
   it('uses default python when build123d has no path', () => {
@@ -36,7 +36,7 @@ describe('createCADService', () => {
   it('throws for unknown backend', () => {
     expect(() =>
       createCADService({ backend: 'unknown' as 'openscad' })
-    ).toThrow('Unknown CAD backend')
+    ).toThrow('Unsupported CAD backend: unknown')
   })
 })
 

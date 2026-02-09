@@ -6,8 +6,12 @@
  * high-quality context to the LLM assistant.
  * 
  * Usage:
- *   node scripts/generate-context.cjs [--openscad] [--build123d] [--all]
- * 
+ *   node scripts/generate-context.cjs [--openscad] [--build123d] [--all] [--no-gemini]
+ *
+ * Optional LLM condense step (reduces context size for lower token use):
+ *   Set OPENROUTER_API_KEY (preferred; same as in the app) or GEMINI_API_KEY. Use --no-gemini to skip.
+ *   Model: OPENROUTER_MODEL or GEMINI_MODEL (e.g. google/gemini-2.0-flash). Default: google/gemini-2.0-flash.
+ *
  * Dependencies:
  *   npm install cheerio node-fetch
  */
@@ -24,12 +28,180 @@ if (!fs.existsSync(RESOURCES_DIR)) {
     fs.mkdirSync(RESOURCES_DIR, { recursive: true });
 }
 
+// --- Gemini condense prompts (goal: high-quality, ~60% smaller context) ---
+
+const BUILD123D_CONDENSE_PROMPT = `I have a raw introspection dump of the Python library \`build123d\`. I need you to refactor this into a "Context Guide" optimized for an LLM to read and generate code from.
+
+Please process the input using the following STRICT rules:
+
+1.  **Aggressive Noise Stripping:**
+    * Remove ALL citation tags like \`<...>\`, \`</...>\`, etc.
+    * Remove timestamps, docstrings, and standard Python boilerplate (\`dataclass\`, \`cast\`, \`abstractmethod\`).
+    * Do NOT include any introduction or conclusion text. Output ONLY the Python code block.
+
+2.  **Remove Internals:**
+    * COMPLETELY REMOVE any classes starting with \`BRep\`, \`TopoDS\`, \`TopLoc\`, or \`OCP\`.
+
+3.  **Simplify Signatures:**
+    * Keep argument names and defaults (e.g., \`radius=1.0\`).
+    * Remove verbose type hints. Change \`align: 'Align | tuple...'\` to just \`align=(Align.CENTER, Align.CENTER)\`.
+
+4.  **Structure & Enums (Mandatory):**
+    * **Section 1: Concepts:** briefly list Context Managers, Algebra (\`+\`, \`-\`, \`&\`), and Selectors.
+    * **Section 2: API Reference:**
+        * **Enums:** You MUST explicitly define \`Mode\`, \`Align\`, \`Transition\`, and \`Side\` as Enums at the top of this section so the LLM knows valid options.
+        * **Builders:** (BuildPart, BuildSketch, BuildLine).
+        * **3D / 2D / 1D Objects.**
+        * **Operations.**
+    * **Section 3: Patterns (The Grammar):** You MUST append a section at the end showing idiomatic usage.
+        * Show a \`BuildPart\` containing a \`BuildSketch\`.
+        * Show the "Selector Pattern": \`p.faces().sort_by(Axis.Z).last\`.
+
+5.  **Clarify Selectors:** Explicitly warn against using list indices (e.g., \`faces()[0]\`) and encourage \`.sort_by()\` or \`.filter_by()\`.
+
+**Goal:** A clean, dense API reference that includes the *grammar* of how to nest these functions.
+
+RAW CONTENT FOLLOWS (between the lines ---):
+---
+`;
+
+const OPENSCAD_CONDENSE_PROMPT = `I have a raw, messy documentation dump of \`OpenSCAD\`. I need you to refactor this into a "Context Guide" optimized for an LLM to read and generate code from.
+
+Please process the input using the following STRICT rules:
+
+1.  **Aggressive Noise Stripping:**
+    * Remove ALL citation tags like \`<...>\`, \`</...>\`.
+    * Remove any Intro/Outro text. Output ONLY the code block.
+    * **Critical:** The source tags are currently breaking code logic (e.g., inside \`{}\`). Ensure the final code is syntactically valid OpenSCAD.
+
+2.  **Structure (Mandatory Sections):**
+    * **Special Variables:** ($fn, $t, $children).
+    * **3D Primitives:** (cube, sphere, cylinder, polyhedron).
+    * **2D Primitives:** (square, circle, polygon, text).
+    * **Boolean (CSG):** (union, difference, intersection).
+    * **Transforms:** (translate, rotate, scale, resize, mirror, offset).
+    * **High-Level:** (hull, minkowski, linear_extrude, rotate_extrude).
+    * **Logic & Loops:** (for, intersection_for, if, let).
+    * **Modifiers:** (*, !, #, %).
+
+3.  **Inject Missing Knowledge (Crucial):**
+    * **List Comprehensions:** You MUST add a section explaining \`[ for (i = range) i ]\` usage, which is missing from the source.
+    * **Vector Math:** Briefly note that standard operators (+, -, *) work on vectors (e.g., \`[1,1] + [2,2]\`).
+
+4.  **Add "Patterns" Section (The Grammar):**
+    * At the end, add a section showing common idiomatic usage:
+        * **2D to 3D:** \`linear_extrude(10) circle(5);\`
+        * **Subtract Pattern:** \`difference() { Body(); Hole(); }\`
+        * **Negative Space:** \`translate([0,0,-0.1])\` (for clean previews).
+
+**Goal:** A dense, copy-pasteable syntax guide that includes the "grammar" of nesting and list comprehensions.
+
+RAW CONTENT FOLLOWS (between the lines ---):
+---
+`;
+
+const OPENROUTER_ENDPOINT = 'https://openrouter.ai/api/v1/chat/completions';
+
+/** Extract text from OpenRouter/OpenAI-style message content (string or array of { text }). */
+function extractMessageContent(content) {
+    if (typeof content === 'string') return content;
+    if (Array.isArray(content)) {
+        return content.map((part) => (part && typeof part.text === 'string' ? part.text : '')).join('').trim();
+    }
+    return '';
+}
+
 /**
- * Generate OpenSCAD context by scraping the official cheatsheet
+ * Condense raw context with an LLM to reduce token use while keeping quality.
+ * Prefers OPENROUTER_API_KEY (OpenRouter); falls back to GEMINI_API_KEY (Google SDK).
+ * Model: OPENROUTER_MODEL or GEMINI_MODEL. Default: google/gemini-2.0-flash.
+ * @param {string} rawContent - Raw context text
+ * @param {string} promptPrefix - Instruction prompt ending with "---"
+ * @param {string} label - For log messages (e.g. 'OpenSCAD', 'build123d')
+ * @returns {Promise<string|null>} Condensed text or null on skip/failure
  */
-async function generateOpenSCADContext() {
+function getCondenseApiKey() {
+    const openRouter = process.env.OPENROUTER_API_KEY && process.env.OPENROUTER_API_KEY.trim();
+    const gemini = (process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || '').trim();
+    if (openRouter) return { type: 'openrouter', key: openRouter };
+    if (gemini) return { type: 'gemini', key: gemini };
+    return null;
+}
+
+async function condenseWithLLM(rawContent, promptPrefix, label) {
+    const creds = getCondenseApiKey();
+    if (!creds) return null;
+    const openRouterKey = creds.type === 'openrouter' ? creds.key : null;
+    const geminiKey = creds.type === 'gemini' ? creds.key : null;
+
+    const modelName = process.env.OPENROUTER_MODEL || process.env.GEMINI_MODEL || 'google/gemini-2.0-flash';
+    const fullPrompt = promptPrefix + rawContent;
+
+    if (openRouterKey) {
+        try {
+            const fetch = (await import('node-fetch')).default;
+            console.log(`  🤖 Condensing ${label} context with OpenRouter (${modelName})...`);
+            const response = await fetch(OPENROUTER_ENDPOINT, {
+                method: 'POST',
+                headers: {
+                    Authorization: `Bearer ${openRouterKey}`,
+                    'Content-Type': 'application/json',
+                    'X-Title': 'Torrify'
+                },
+                body: JSON.stringify({
+                    model: modelName,
+                    messages: [{ role: 'user', content: fullPrompt }],
+                    temperature: 0.3,
+                    max_tokens: 16384
+                })
+            });
+            if (!response.ok) {
+                const errText = await response.text();
+                throw new Error(`OpenRouter ${response.status}: ${errText || response.statusText}`);
+            }
+            const data = await response.json();
+            const text = extractMessageContent(data?.choices?.[0]?.message?.content);
+            if (text && text.trim()) {
+                console.log(`  ✅ Condensed ${label} context`);
+                return text.trim();
+            }
+            console.warn(`  ⚠️ OpenRouter returned empty response for ${label}, using raw content`);
+            return null;
+        } catch (err) {
+            console.error(`  ❌ OpenRouter condense failed (${label}): ${err.message}`);
+            return null;
+        }
+    }
+
+    try {
+        const { GoogleGenerativeAI } = await import('@google/generative-ai');
+        const genAI = new GoogleGenerativeAI(geminiKey);
+        const model = genAI.getGenerativeModel({ model: modelName });
+        console.log(`  🤖 Condensing ${label} context with Gemini (${modelName})...`);
+        const result = await model.generateContent(fullPrompt);
+        const text = result.response && result.response.text();
+        if (text && text.trim()) {
+            console.log(`  ✅ Condensed ${label} context`);
+            return text.trim();
+        }
+        console.warn(`  ⚠️ Gemini returned empty response for ${label}, using raw content`);
+        return null;
+    } catch (err) {
+        console.error(`  ❌ Gemini condense failed (${label}): ${err.message}`);
+        return null;
+    }
+}
+
+/**
+ * Generate OpenSCAD context by scraping the official cheatsheet.
+ * @param {{ skipGemini?: boolean }} options - skipGemini: skip Gemini condense step even if GEMINI_API_KEY is set
+ */
+async function generateOpenSCADContext(options = {}) {
+    const { skipGemini = false } = options;
     console.log('📦 Generating OpenSCAD context...');
     
+    let content;
+    const outputPath = path.join(RESOURCES_DIR, 'context_openscad.txt');
     try {
         // Dynamic import for ES modules
         const cheerio = await import('cheerio');
@@ -80,27 +252,24 @@ async function generateOpenSCADContext() {
         });
         
         // Build the context file
-        const content = buildOpenSCADContextContent(functions, specialVars);
-        
-        const outputPath = path.join(RESOURCES_DIR, 'context_openscad.txt');
-        fs.writeFileSync(outputPath, content, 'utf-8');
-        
-        console.log(`  ✅ Saved to ${outputPath}`);
+        content = buildOpenSCADContextContent(functions, specialVars);
         console.log(`  📊 Found ${functions.length} functions, ${specialVars.length} special variables`);
-        
-        return true;
     } catch (error) {
         console.error(`  ❌ Error generating OpenSCAD context: ${error.message}`);
-        
-        // Fall back to bundled static content
         console.log('  📋 Using static fallback content...');
-        const fallbackContent = getOpenSCADFallbackContent();
-        const outputPath = path.join(RESOURCES_DIR, 'context_openscad.txt');
-        fs.writeFileSync(outputPath, fallbackContent, 'utf-8');
-        console.log(`  ✅ Saved fallback to ${outputPath}`);
-        
-        return true;
+        content = getOpenSCADFallbackContent();
     }
+    fs.writeFileSync(outputPath, content, 'utf-8');
+    console.log(`  ✅ Saved to ${outputPath}`);
+    // Optional: condense with LLM to reduce token use
+    if (!skipGemini && getCondenseApiKey()) {
+        const condensed = await condenseWithLLM(content, OPENSCAD_CONDENSE_PROMPT, 'OpenSCAD');
+        if (condensed) {
+            fs.writeFileSync(outputPath, condensed, 'utf-8');
+            console.log(`  ✅ Replaced with condensed context`);
+        }
+    }
+    return true;
 }
 
 /**
@@ -232,37 +401,38 @@ function getOpenSCADFallbackContent() {
 }
 
 /**
- * Generate build123d context by running Python introspection
+ * Generate build123d context by running Python introspection.
+ * @param {{ skipGemini?: boolean }} options - skipGemini: skip Gemini condense step even if GEMINI_API_KEY is set
  */
-async function generateBuild123dContext() {
+async function generateBuild123dContext(options = {}) {
+    const { skipGemini = false } = options;
     console.log('🐍 Generating build123d context...');
     
     const pythonScript = path.join(__dirname, 'generate-build123d-context.py');
     const outputPath = path.join(RESOURCES_DIR, 'context_build123d.txt');
-    
+    let content;
     try {
-        // Try to run the Python script
-        const result = execSync(`python "${pythonScript}"`, {
+        content = execSync(`python "${pythonScript}"`, {
             encoding: 'utf-8',
             timeout: 60000,
             stdio: ['pipe', 'pipe', 'pipe']
         });
-        
-        fs.writeFileSync(outputPath, result, 'utf-8');
-        console.log(`  ✅ Saved to ${outputPath}`);
-        
-        return true;
     } catch (error) {
         console.error(`  ❌ Error running Python script: ${error.message}`);
         console.log('  📋 Using static fallback content...');
-        
-        // Fall back to bundled static content
-        const fallbackContent = getBuild123dFallbackContent();
-        fs.writeFileSync(outputPath, fallbackContent, 'utf-8');
-        console.log(`  ✅ Saved fallback to ${outputPath}`);
-        
-        return true;
+        content = getBuild123dFallbackContent();
     }
+    fs.writeFileSync(outputPath, content, 'utf-8');
+    console.log(`  ✅ Saved to ${outputPath}`);
+    // Optional: condense with LLM to reduce token use
+    if (!skipGemini && getCondenseApiKey()) {
+        const condensed = await condenseWithLLM(content, BUILD123D_CONDENSE_PROMPT, 'build123d');
+        if (condensed) {
+            fs.writeFileSync(outputPath, condensed, 'utf-8');
+            console.log(`  ✅ Replaced with condensed context`);
+        }
+    }
+    return true;
 }
 
 /**
@@ -477,20 +647,29 @@ result = part.part
  */
 async function main() {
     const args = process.argv.slice(2);
-    
+    const skipGemini = args.includes('--no-gemini');
     const generateAll = args.includes('--all') || args.length === 0;
     const generateOpenSCAD = generateAll || args.includes('--openscad');
     const generateBuild123d = generateAll || args.includes('--build123d');
-    
+    const options = { skipGemini };
+    const condenseCreds = getCondenseApiKey();
+
     console.log('🔧 Torrify Context Generator\n');
+    if (skipGemini) {
+        console.log('  (Condense step disabled by --no-gemini)\n');
+    } else if (condenseCreds) {
+        console.log(`  Condense step: using ${condenseCreds.type === 'openrouter' ? 'OPENROUTER_API_KEY' : 'GEMINI_API_KEY'}\n`);
+    } else {
+        console.log('  No API key set for condense step. Set OPENROUTER_API_KEY or GEMINI_API_KEY to enable.\n');
+    }
     
     if (generateOpenSCAD) {
-        await generateOpenSCADContext();
+        await generateOpenSCADContext(options);
         console.log('');
     }
     
     if (generateBuild123d) {
-        await generateBuild123dContext();
+        await generateBuild123dContext(options);
         console.log('');
     }
     

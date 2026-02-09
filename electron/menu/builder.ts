@@ -1,22 +1,52 @@
+/**
+ * Application Menu Builder.
+ * 
+ * Constructs the native system menu for Torrify. Maps menu items to 
+ * renderer-process events via IPC and handles platform-specific 
+ * conventions (e.g., macOS 'About' menu).
+ */
 import { app, Menu, type BrowserWindow } from 'electron'
 
+/**
+ * Builds and sets the global application menu.
+ * 
+ * @param mainWindow - The primary application window to receive menu events
+ */
 export function buildApplicationMenu(mainWindow: BrowserWindow | null): void {
   const menuTemplate: Electron.MenuItemConstructorOptions[] = [
     {
       label: 'File',
       submenu: [
-        { label: 'New', accelerator: 'CmdOrCtrl+N', click: () => mainWindow?.webContents.send('menu-new-file') },
-        { label: 'Open...', accelerator: 'CmdOrCtrl+O', click: () => mainWindow?.webContents.send('menu-open-file') },
+        { 
+          label: 'New', 
+          accelerator: 'CmdOrCtrl+N', 
+          click: () => mainWindow?.webContents.send('menu-new-file') 
+        },
+        { 
+          label: 'Open...', 
+          accelerator: 'CmdOrCtrl+O', 
+          click: () => mainWindow?.webContents.send('menu-open-file') 
+        },
         { type: 'separator' },
-        { label: 'Save', accelerator: 'CmdOrCtrl+S', click: () => mainWindow?.webContents.send('menu-save-file') },
+        { 
+          label: 'Save', 
+          accelerator: 'CmdOrCtrl+S', 
+          click: () => mainWindow?.webContents.send('menu-save-file') 
+        },
         {
           label: 'Save As...',
           accelerator: 'CmdOrCtrl+Shift+S',
           click: () => mainWindow?.webContents.send('menu-save-as')
         },
         { type: 'separator' },
-        { label: 'Export Source...', click: () => mainWindow?.webContents.send('menu-export-scad') },
-        { label: 'Export STL...', click: () => mainWindow?.webContents.send('menu-export-stl') },
+        { 
+          label: 'Export Source...', 
+          click: () => mainWindow?.webContents.send('menu-export-scad') 
+        },
+        { 
+          label: 'Export STL...', 
+          click: () => mainWindow?.webContents.send('menu-export-stl') 
+        },
         { type: 'separator' },
         { role: 'quit' }
       ]
@@ -37,7 +67,7 @@ export function buildApplicationMenu(mainWindow: BrowserWindow | null): void {
       label: 'View',
       submenu: [
         {
-          label: 'Render',
+          label: 'Render Geometry',
           accelerator: 'CmdOrCtrl+Enter',
           click: () => mainWindow?.webContents.send('menu-render')
         },
@@ -54,27 +84,49 @@ export function buildApplicationMenu(mainWindow: BrowserWindow | null): void {
       ]
     },
     {
-      label: 'LLM',
+      label: 'AI Assistant',
       submenu: [
-        { label: 'Toggle AI', click: () => mainWindow?.webContents.send('menu-llm-toggle') },
+        { 
+          label: 'Toggle AI Features', 
+          click: () => mainWindow?.webContents.send('menu-llm-toggle') 
+        },
         { type: 'separator' },
-        { label: 'Switch to BYOK', click: () => mainWindow?.webContents.send('menu-llm-byok') },
-        { label: 'Switch to PRO', click: () => mainWindow?.webContents.send('menu-llm-pro') },
+        { 
+          label: 'Direct API Mode (BYOK)', 
+          click: () => mainWindow?.webContents.send('menu-llm-byok') 
+        },
+        { 
+          label: 'Managed Cloud Mode (PRO)', 
+          click: () => mainWindow?.webContents.send('menu-llm-pro') 
+        },
         { type: 'separator' },
-        { label: 'LLM Settings...', click: () => mainWindow?.webContents.send('menu-llm-settings') }
+        { 
+          label: 'AI Configuration...', 
+          click: () => mainWindow?.webContents.send('menu-llm-settings') 
+        }
       ]
     },
     {
       label: 'Help',
       submenu: [
-        { label: 'Help Bot', click: () => mainWindow?.webContents.send('menu-help-bot') },
-        { label: 'Show Demo', click: () => mainWindow?.webContents.send('menu-show-demo') },
+        { 
+          label: 'Interactive Help Bot', 
+          click: () => mainWindow?.webContents.send('menu-help-bot') 
+        },
+        { 
+          label: 'Launch Guided Tour', 
+          click: () => mainWindow?.webContents.send('menu-show-demo') 
+        },
         { type: 'separator' },
-        { label: 'Settings...', click: () => mainWindow?.webContents.send('menu-settings') }
+        { 
+          label: 'System Preferences...', 
+          click: () => mainWindow?.webContents.send('menu-settings') 
+        }
       ]
     }
   ]
 
+  // macOS-specific top-level application menu
   if (process.platform === 'darwin') {
     menuTemplate.unshift({
       label: app.name,

@@ -38,8 +38,8 @@ vi.mock('../services/llm', async () => {
       gateway: 'PRO'
     },
     DEFAULT_MODELS: {
-      gemini: 'gemini-2.0-flash-exp',
-      openai: 'gpt-4-turbo-preview',
+      gemini: 'gemini-3-flash',
+      openai: 'gpt-5.2',
       anthropic: 'claude-3-5-sonnet-20241022',
       custom: '',
       openrouter: 'anthropic/claude-3.7-sonnet:thinking',
@@ -107,7 +107,7 @@ if (typeof global.window !== 'undefined') {
     build123dPythonPath: 'python',
     llm: {
       provider: 'gemini',
-      model: 'gemini-2.0-flash-exp',
+      model: 'gemini-3-flash',
       apiKey: 'test-api-key',
       enabled: true,
       temperature: 0.7,
@@ -125,16 +125,18 @@ if (typeof global.window !== 'undefined') {
   openScadFile: vi.fn().mockResolvedValue({ canceled: true }),
   saveScadFile: vi.fn().mockResolvedValue({ canceled: true }),
   setWindowTitle: vi.fn().mockResolvedValue(undefined),
-  getOpenRouterKey: vi.fn().mockResolvedValue(null),
-  gatewayRequest: vi.fn().mockResolvedValue({
-    ok: true,
-    status: 200,
-    statusText: 'OK',
-    data: {
-      choices: [{ message: { content: 'Mocked Gateway response' } }],
-      usage: { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 }
+  getOpenRouterConfigured: vi.fn().mockResolvedValue(false),
+  llmSendMessage: vi.fn().mockResolvedValue({
+    success: true,
+    response: {
+      content: 'Mocked AI response',
+      model: 'test-model',
+      usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 }
     }
   }),
+  llmStreamMessage: vi.fn().mockResolvedValue({ streamId: 'mock-stream-id' }),
+  llmStreamAbort: vi.fn().mockResolvedValue(undefined),
+  onLlmStreamChunk: vi.fn(),
   getRecentFiles: vi.fn().mockResolvedValue([]),
   clearRecentFiles: vi.fn().mockResolvedValue({ success: true }),
   removeRecentFile: vi.fn().mockResolvedValue({ success: true }),

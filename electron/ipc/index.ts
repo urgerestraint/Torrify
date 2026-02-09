@@ -6,6 +6,7 @@ import { registerProjectHandlers } from './project-handlers'
 import { registerRecentHandlers } from './recent-handlers'
 import { registerContextHandlers } from './context-handlers'
 import { registerWindowDocHandlers } from './window-doc-handlers'
+import { registerLlmHandlers } from './llm-handlers'
 
 /**
  * Registers all IPC handlers. Call once when the app is ready.
@@ -19,4 +20,5 @@ export function registerAllHandlers(getMainWindow: () => BrowserWindow | null): 
   registerRecentHandlers()
   registerContextHandlers()
   registerWindowDocHandlers(getMainWindow)
+  registerLlmHandlers(getMainWindow)
 }

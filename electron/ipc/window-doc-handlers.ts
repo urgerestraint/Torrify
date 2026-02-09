@@ -13,7 +13,6 @@ const DOC_FILES = [
   'docs/getting-started/START_APP.md',
   'docs/developer/DEV_README.md',
   'docs/developer/TESTING.md',
-  'docs/architecture/HANDOFF.md',
   'docs/architecture/PROJECT_SUMMARY.md',
   'docs/features/LLM_INTEGRATION.md',
   'docs/features/SETTINGS_FEATURE.md',

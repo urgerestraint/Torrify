@@ -31,7 +31,12 @@ vi.mock('three', () => {
     Color: vi.fn((color) => color),
     AmbientLight: vi.fn(() => ({})),
     DirectionalLight: vi.fn(() => ({
-      position: { set: vi.fn() }
+      position: { set: vi.fn() },
+      castShadow: false,
+      shadow: {
+        mapSize: { width: 2048, height: 2048 },
+        camera: { near: 0.1, far: 500, left: -100, right: 100, top: 100, bottom: -100 }
+      }
     })),
     MeshStandardMaterial: vi.fn(() => ({
       dispose: vi.fn()

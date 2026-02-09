@@ -16,7 +16,7 @@ describe('CAD Service Types', () => {
     it('should have correct info for openscad', () => {
       const info = BACKEND_INFO.openscad
       expect(info.fileExtension).toBe('scad')
-      expect(info.language).toBe('c')
+      expect(info.language).toBe('scad')
       expect(info.defaultCode).toContain('cube')
     })
 

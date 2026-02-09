@@ -103,13 +103,14 @@ interface ElectronAPI {
   }>
   renderStl: (code: string) => Promise<{
     success: boolean
-    stlBase64: string
+    stlBase64?: string
     timestamp: number
+    error?: string
   }>
-  saveProject: (project: any) => Promise<{ canceled: boolean; filePath?: string; error?: string }>
-  loadProject: () => Promise<{ canceled: boolean; project?: any; error?: string }>
-  exportScad: (code: string, backend?: CADBackend) => Promise<{ canceled: boolean; filePath?: string }>
-  exportStl: (stlBase64: string | null) => Promise<{ canceled: boolean; filePath?: string }>
+  saveProject: (project: any, currentFilePath?: string) => Promise<{ canceled: boolean; filePath?: string; error?: string }>
+  loadProject: () => Promise<{ canceled: boolean; project?: any; filePath?: string; error?: string }>
+  exportScad: (code: string, backend?: CADBackend, currentFilePath?: string) => Promise<{ canceled: boolean; filePath?: string }>
+  exportStl: (stlBase64: string | null, currentFilePath?: string) => Promise<{ canceled: boolean; filePath?: string }>
   getTempDir: () => Promise<string>
   getSettings: () => Promise<Settings>
   saveSettings: (settings: Settings) => Promise<{ success: boolean }>
@@ -122,14 +123,15 @@ interface ElectronAPI {
   openScadFile: (backend?: CADBackend) => Promise<{ canceled: boolean; filePath?: string; code?: string; error?: string }>
   saveScadFile: (code: string, filePath?: string, backend?: CADBackend) => Promise<{ canceled: boolean; filePath?: string; error?: string }>
   setWindowTitle: (title: string) => Promise<void>
-  getOpenRouterKey: () => Promise<string | null>
-  gatewayRequest: (request: { licenseKey?: string; body?: unknown }) => Promise<{
-    ok: boolean
-    status: number
-    statusText: string
-    data?: unknown
-    errorText?: string
+  getOpenRouterConfigured: () => Promise<boolean>
+  llmSendMessage: (payload: { messages: unknown[]; currentCode?: string; cadBackend?: string; apiContext?: string }) => Promise<{
+    success: boolean
+    response?: { content: string; model: string; usage?: { promptTokens: number; completionTokens: number; totalTokens: number } }
+    error?: string
   }>
+  llmStreamMessage: (payload: { messages: unknown[]; currentCode?: string; cadBackend?: string; apiContext?: string }) => Promise<{ streamId: string | null; error?: string }>
+  llmStreamAbort: (streamId: string) => Promise<void>
+  onLlmStreamChunk: (streamId: string, callback: (delta: string, full: string, done: boolean) => void) => void
   getRecentFiles: () => Promise<RecentFile[]>
   clearRecentFiles: () => Promise<{ success: boolean }>
   removeRecentFile: (filePath: string) => Promise<{ success: boolean }>

@@ -18,7 +18,7 @@ const defaultSettings: Settings = {
   build123dPythonPath: 'python',
   llm: {
     provider: 'gemini',
-    model: 'gemini-2.0-flash-exp',
+    model: 'gemini-3-flash',
     apiKey: '',
     enabled: false,
     temperature: 0.7,
@@ -35,6 +35,9 @@ vi.mock('electron', () => ({
   },
   dialog: {
     showOpenDialog: vi.fn().mockResolvedValue({ canceled: true, filePaths: [] })
+  },
+  app: {
+    getPath: vi.fn((name: string) => (name === 'home' ? '/home/user' : '/tmp'))
   }
 }))
 

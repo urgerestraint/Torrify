@@ -39,7 +39,7 @@ describe('ErrorBoundary', () => {
       </ErrorBoundary>
     )
     expect(screen.getByText('Something went wrong')).toBeInTheDocument()
-    expect(screen.getByText(/The UI encountered an unexpected error/)).toBeInTheDocument()
+    expect(screen.getByText(/The user interface encountered an unexpected failure/)).toBeInTheDocument()
   })
 
   it('displays the error message in the fallback', () => {
@@ -58,6 +58,6 @@ describe('ErrorBoundary', () => {
         <ThrowError message="Logged error" />
       </ErrorBoundary>
     )
-    expect(vi.mocked(logger).error).toHaveBeenCalledWith('UI error boundary caught', expect.any(Object))
+    expect(vi.mocked(logger).error).toHaveBeenCalledWith('UI runtime crash caught by boundary', expect.any(Object))
   })
 })

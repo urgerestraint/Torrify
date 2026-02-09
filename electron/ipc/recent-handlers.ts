@@ -15,9 +15,9 @@ export function registerRecentHandlers(): void {
 
   ipcMain.handle('clear-recent-files', () => {
     const settings = getCurrentSettings()
-    settings.recentFiles = []
-    setCurrentSettings(settings)
-    saveSettings(settings)
+    const updated = { ...settings, recentFiles: [] }
+    setCurrentSettings(updated)
+    saveSettings(updated)
     return { success: true }
   })
 
@@ -28,9 +28,12 @@ export function registerRecentHandlers(): void {
     }
     const inputPath = parseResult.data
     const settings = getCurrentSettings()
-    settings.recentFiles = settings.recentFiles.filter((file) => file.filePath !== inputPath)
-    setCurrentSettings(settings)
-    saveSettings(settings)
+    const updated = {
+      ...settings,
+      recentFiles: settings.recentFiles.filter((file) => file.filePath !== inputPath)
+    }
+    setCurrentSettings(updated)
+    saveSettings(updated)
     return { success: true }
   })
 

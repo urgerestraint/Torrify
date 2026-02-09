@@ -14,7 +14,7 @@ describe('SettingsModal CAD Backend', () => {
       build123dPythonPath: 'python',
       llm: {
         provider: 'gemini',
-        model: 'gemini-2.0-flash-exp',
+        model: 'gemini-3-flash',
         apiKey: 'test-key',
         enabled: true,
         temperature: 0.7,
@@ -62,7 +62,7 @@ describe('SettingsModal CAD Backend', () => {
       build123dPythonPath: 'python',
       llm: {
         provider: 'gemini',
-        model: 'gemini-2.0-flash-exp',
+        model: 'gemini-3-flash',
         apiKey: 'test-key',
         enabled: true,
         temperature: 0.7,

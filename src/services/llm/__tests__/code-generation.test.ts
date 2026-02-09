@@ -33,14 +33,15 @@ describe('LLM Code Generation', () => {
     if (USE_REAL_API) {
       const apiKey = process.env.LLM_TEST_API_KEY!
       
-      // Configure electronAPI mock to return the real API key for OpenRouter
+      // For OpenRouter, main process uses OPENROUTER_API_KEY from env. In tests we only need
+      // the renderer to consider OpenRouter "configured" so the proxy proceeds; real key is in main.
       if (TEST_PROVIDER === 'openrouter' && typeof window !== 'undefined' && window.electronAPI) {
-        window.electronAPI.getOpenRouterKey = vi.fn().mockResolvedValue(apiKey)
+        window.electronAPI.getOpenRouterConfigured = vi.fn().mockResolvedValue(true)
       }
       
       llmService = createLLMService({
         provider: TEST_PROVIDER,
-        model: TEST_PROVIDER === 'gemini' ? 'gemini-2.0-flash-exp' : 'anthropic/claude-3.5-sonnet',
+        model: TEST_PROVIDER === 'gemini' ? 'gemini-3-flash' : 'anthropic/claude-3.5-sonnet',
         apiKey,
         enabled: true,
       })
@@ -60,7 +61,7 @@ describe('LLM Code Generation', () => {
         // Get LLM service (either real or mocked)
         const service = llmService || createLLMService({
           provider: 'gemini',
-          model: 'gemini-2.0-flash-exp',
+          model: 'gemini-3-flash',
           apiKey: 'test-key',
           enabled: true,
         })

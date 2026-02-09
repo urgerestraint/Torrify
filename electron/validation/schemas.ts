@@ -31,7 +31,7 @@ export const SettingsSchema = z.object({
     enabled: z.boolean(),
     customEndpoint: z.string().max(512).optional(),
     temperature: z.number().min(0).max(2).optional(),
-    maxTokens: z.number().min(1).max(100000).optional(),
+    maxTokens: z.number().min(1).max(1000000).optional(),
     gatewayBaseUrl: z.string().max(512).optional(),
     gatewayLicenseKey: z.string().max(500).optional()
   }),

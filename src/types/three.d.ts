@@ -28,9 +28,23 @@ declare module 'three' {
   export class AmbientLight extends Object3D {
     constructor(color?: number | string, intensity?: number)
   }
+  export interface DirectionalLightShadowCamera {
+    near: number
+    far: number
+    left: number
+    right: number
+    top: number
+    bottom: number
+  }
+  export interface DirectionalLightShadow {
+    mapSize: { width: number; height: number }
+    camera: DirectionalLightShadowCamera
+  }
   export class DirectionalLight extends Object3D {
     constructor(color?: number | string, intensity?: number)
     position: Vector3
+    castShadow: boolean
+    shadow: DirectionalLightShadow
   }
   export class MeshStandardMaterial {
     constructor(params?: { color?: number | string; metalness?: number; roughness?: number })

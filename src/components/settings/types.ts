@@ -1,40 +1,73 @@
+/**
+ * Application Settings Types (Renderer Process).
+ */
 import type { CADBackend } from '../../services/cad'
 
+/**
+ * Configuration for an LLM provider.
+ */
 export interface LLMConfig {
-  provider: 'gemini' | 'openai' | 'anthropic' | 'custom' | 'openrouter' | 'ollama' | 'gateway'
-  model: string
-  apiKey: string
-  enabled: boolean
-  customEndpoint?: string
-  temperature?: number
-  maxTokens?: number
-  gatewayBaseUrl?: string
-  gatewayLicenseKey?: string
+  readonly provider: 'gemini' | 'openai' | 'anthropic' | 'custom' | 'openrouter' | 'ollama' | 'gateway'
+  readonly model: string
+  readonly apiKey: string
+  readonly enabled: boolean
+  readonly customEndpoint?: string
+  readonly temperature?: number
+  readonly maxTokens?: number
+  readonly gatewayBaseUrl?: string
+  readonly gatewayLicenseKey?: string
 }
 
+/**
+ * Entry in the file history.
+ */
 export interface RecentFile {
-  filePath: string
-  lastOpened: string
+  readonly filePath: string
+  readonly lastOpened: string
 }
 
+/**
+ * Global application configuration.
+ * Note: recentFiles is mutable in the type so it is assignable to window.electronAPI.saveSettings (vite-env.d.ts).
+ */
 export interface Settings {
-  cadBackend: CADBackend
-  openscadPath: string
-  build123dPythonPath: string
-  llm: LLMConfig
-  recentFiles?: RecentFile[]
-  hasSeenDemo?: boolean
+  readonly cadBackend: CADBackend
+  readonly openscadPath: string
+  readonly build123dPythonPath: string
+  readonly llm: LLMConfig
+  readonly recentFiles?: RecentFile[]
+  readonly hasSeenDemo?: boolean
 }
 
+/**
+ * Navigation tabs in the Settings Modal.
+ */
 export type SettingsTab = 'general' | 'ai' | 'knowledge'
 
+/**
+ * Detailed file-level status for knowledge base components.
+ */
 export interface ContextStatusInfo {
-  user: { exists: boolean; size: number; modified: string | null }
-  bundled: { exists: boolean; size: number; modified: string | null }
-  active: 'user' | 'bundled'
+  /** User-provided overrides */
+  readonly user: { 
+    readonly exists: boolean
+    readonly size: number
+    readonly modified: string | null 
+  }
+  /** Bundled reference documentation */
+  readonly bundled: { 
+    readonly exists: boolean
+    readonly size: number
+    readonly modified: string | null 
+  }
+  /** Indicates which version is currently being served to the LLM */
+  readonly active: 'user' | 'bundled'
 }
 
+/**
+ * Synchronization status for the entire Knowledge Base.
+ */
 export interface ContextStatus {
-  openscad?: ContextStatusInfo
-  build123d?: ContextStatusInfo
+  readonly openscad?: ContextStatusInfo
+  readonly build123d?: ContextStatusInfo
 }

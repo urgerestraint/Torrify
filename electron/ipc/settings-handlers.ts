@@ -1,9 +1,8 @@
-import { ipcMain, dialog } from 'electron'
+import { ipcMain, dialog, app } from 'electron'
 import * as fs from 'fs'
 import {
   SettingsSchema,
   FilePathSchema,
-  GatewayRequestSchema,
   CADBackendSchema
 } from '../validation/schemas'
 import { createCADService } from '../cad'
@@ -13,93 +12,19 @@ import {
   saveSettings,
   loadSettings
 } from '../settings'
-import { SETTINGS_FILE, GATEWAY_BASE_URL } from '../constants'
+import { SETTINGS_FILE } from '../constants'
+import { createCappedBuffer } from '../cad/process-utils'
 import { getErrorMessage } from '../utils/error'
 import { logger } from '../utils/logger'
 import type { Settings } from '../settings/types'
-
-function getGatewayEndpoint(): string {
-  const base = GATEWAY_BASE_URL.replace(/\/$/, '')
-  return `${base}/api/chat`
-}
 
 export function registerSettingsHandlers(): void {
   ipcMain.handle('get-settings', () => {
     return getCurrentSettings()
   })
 
-  ipcMain.handle('get-openrouter-key', () => {
-    return process.env.OPENROUTER_API_KEY?.trim() || null
-  })
-
-  ipcMain.handle('gateway-request', async (_event, requestInput: unknown) => {
-    const parseResult = GatewayRequestSchema.safeParse(requestInput)
-    if (!parseResult.success) {
-      return {
-        ok: false,
-        status: 400,
-        statusText: 'Invalid request',
-        errorText: 'Gateway request validation failed.'
-      }
-    }
-    const request = parseResult.data
-    const licenseKey = (request?.licenseKey ?? '').trim()
-    if (!licenseKey) {
-      return {
-        ok: false,
-        status: 400,
-        statusText: 'Missing license key',
-        errorText: 'Gateway license key is not set.'
-      }
-    }
-
-    const endpoint = getGatewayEndpoint()
-
-    try {
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-License-Key': licenseKey
-        },
-        body: JSON.stringify(request?.body ?? {})
-      })
-
-      const responseText = await response.text()
-
-      if (!response.ok) {
-        return {
-          ok: false,
-          status: response.status,
-          statusText: response.statusText,
-          errorText: responseText
-        }
-      }
-
-      try {
-        const data = JSON.parse(responseText)
-        return {
-          ok: true,
-          status: response.status,
-          statusText: response.statusText,
-          data
-        }
-      } catch {
-        return {
-          ok: false,
-          status: response.status,
-          statusText: 'Invalid JSON',
-          errorText: responseText
-        }
-      }
-    } catch (error) {
-      return {
-        ok: false,
-        status: 500,
-        statusText: 'Gateway request failed',
-        errorText: getErrorMessage(error)
-      }
-    }
+  ipcMain.handle('get-openrouter-configured', () => {
+    return !!process.env.OPENROUTER_API_KEY?.trim()
   })
 
   ipcMain.handle('save-settings', (_event, settingsInput: unknown) => {
@@ -151,10 +76,8 @@ export function registerSettingsHandlers(): void {
     return new Promise((resolve) => {
       const proc = spawn(pythonPath, ['--version'], { windowsHide: true })
 
-      let stdout = ''
-      proc.stdout?.on('data', (data) => {
-        stdout += data.toString()
-      })
+      const stdoutBuf = createCappedBuffer()
+      proc.stdout?.on('data', (data) => stdoutBuf.append(data))
 
       const timeout = setTimeout(() => {
         proc.kill()
@@ -164,7 +87,7 @@ export function registerSettingsHandlers(): void {
       proc.on('close', (code) => {
         clearTimeout(timeout)
         if (code === 0) {
-          resolve({ valid: true, version: stdout.trim() })
+          resolve({ valid: true, version: stdoutBuf.rawValue.trim() })
         } else {
           resolve({ valid: false, error: 'Python not found' })
         }
@@ -255,6 +178,7 @@ export function registerSettingsHandlers(): void {
 
     const result = await dialog.showOpenDialog({
       title: 'Select OpenSCAD Executable',
+      defaultPath: app.getPath('home'),
       properties: ['openFile'],
       filters
     })

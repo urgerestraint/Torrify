@@ -51,3 +51,7 @@ render_preview.png
 coverage/
 .nyc_output/
 tmp/
+
+# Documentation
+docs/.vitepress/dist
+docs/.vitepress/cache

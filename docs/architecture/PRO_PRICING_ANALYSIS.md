@@ -206,10 +206,10 @@ Using the estimates above, the “requests per $20” column provides a first-pa
 - Default model: choose the **lowest-cost model that still passes quality checks** on CAD tasks.
 - Free usage: start with a **small, fixed request count per device/day** and adjust once telemetry is available.
 
-## Implementation considerations (for later)
-- Use proxy to enforce **hard limits** and track **token usage** per request.
-- Store **per-request cost** and aggregate **daily/monthly spend**.
-- Provide UI status: “free requests remaining” and “budget exhausted” messages.
+## Implementation considerations
+- Proxy enforces **hard limits** and tracks **token usage** per request.
+- Stores **per-request cost** and aggregate **daily/monthly spend**.
+- UI status: “free requests remaining” and “budget exhausted” messages.
 
 ---
 
@@ -218,4 +218,3 @@ Using the estimates above, the “requests per $20” column provides a first-pa
 2. Pick baseline `P/C` for each workflow.
 3. Compute cost per request per model.
 4. Select default model and free usage limits.
-5. Add proxy-side enforcement and logging.

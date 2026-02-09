@@ -54,7 +54,7 @@ describe('SettingsSchema', () => {
     build123dPythonPath: 'python',
     llm: {
       provider: 'gemini' as const,
-      model: 'gemini-2.0-flash-exp',
+      model: 'gemini-3-flash',
       apiKey: '',
       enabled: false,
       temperature: 0.7,

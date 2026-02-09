@@ -17,44 +17,109 @@ import {
   useRecentFiles,
   useMenuHandlers,
   useDemo,
+  useProStatus,
   getDefaultMessages
 } from './hooks'
-import type { Settings } from './components/settings'
+import type { Settings, SettingsTab } from './components/settings'
 
+/**
+ * State configuration for the application-wide confirmation/alert dialog.
+ */
 interface DialogState {
-  title: string
-  message: string
-  confirmLabel?: string
-  cancelLabel?: string
-  showCancel: boolean
-  onConfirm: () => void
-  onCancel?: () => void
+  readonly title: string
+  readonly message: string
+  readonly confirmLabel?: string
+  readonly cancelLabel?: string
+  readonly showCancel: boolean
+  readonly onConfirm: () => void
+  readonly onCancel?: () => void
 }
 
+/**
+ * Utility to extract a human-readable error message from varied error types.
+ * 
+ * @param error - The error object or string
+ * @returns A formatted string description of the error
+ */
 function getErrorMsg(error: unknown): string {
   if (error instanceof Error) return error.message
   return typeof error === 'string' ? error : 'Unknown error'
 }
 
+/**
+ * The root Application component.
+ * 
+ * Orchestrates the primary layout and state for the CAD IDE, including:
+ * - Code editor state and persistence
+ * - AI chat history and multi-modal interactions
+ * - 3D STL rendering and preview
+ * - Project/File lifecycle management
+ * - Application-wide settings and modals
+ */
 function App() {
+  // --- State Definitions ---
+  
+  /** Current source code in the active editor */
   const [code, setCode] = useState('')
+  
+  /** Chat message history for the AI assistant */
   const [messages, setMessages] = useState<Message[]>(() => getDefaultMessages('openscad'))
+  
+  /** Reference for tracking unsaved changes across renders without re-triggering effects */
   const hasUnsavedChangesRef = useRef(false)
+  
+  /** Base64 preview image (if the backend supports 2D rasterization) */
   const [previewImage, setPreviewImage] = useState<string | null>(null)
+  
+  /** Base64-encoded STL geometry data for the 3D viewer */
   const [stlBase64, setStlBase64] = useState<string | null>(null)
+  
+  /** Indicates if a CAD render operation is currently in progress */
   const [isRendering, setIsRendering] = useState(false)
+  
+  /** Error message from the last failed render attempt */
   const [renderError, setRenderError] = useState<string | null>(null)
+  
+  /** Visibility of the configuration settings modal */
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
+  
+  /** Visibility of the first-launch onboarding modal */
   const [isWelcomeOpen, setIsWelcomeOpen] = useState(false)
+  
+  /** Used to trigger re-renders when LLM config changes (e.g. from settings modal) */
   const [, setLlmSettings] = useState<Settings['llm'] | null>(null)
+  
+  /** Active CAD engine context ('openscad' or 'build123d') */
   const [cadBackend, setCadBackend] = useState<CADBackend>('openscad')
+  
+  /** Tracks gateway/openrouter key state for menu/UI; null when not applicable */
   const [, setOpenRouterKeySet] = useState<boolean | null>(null)
+  
+  /** Key used to force-reset the Monaco editor instance (e.g. on backend switch) */
   const [editorKey, setEditorKey] = useState(0)
+  
+  /** Monotonic counter used to trigger re-renders in components that depend on settings */
   const [settingsVersion, setSettingsVersion] = useState(0)
-  const [dialogState, setDialogState] = useState<DialogState | null>(null)
-  const [pendingSnapshots, setPendingSnapshots] = useState<string[]>([])
-  const [pendingDiagnosis, setPendingDiagnosis] = useState<{ error: string; code: string } | null>(null)
 
+  /** When set, Settings modal opens with this tab active (e.g. 'ai' for Configure PRO) */
+  const [settingsInitialTab, setSettingsInitialTab] = useState<SettingsTab | null>(null)
+
+  const { isProAuthenticated } = useProStatus(settingsVersion)
+  
+  /** Active state for the global confirmation dialog */
+  const [dialogState, setDialogState] = useState<DialogState | null>(null)
+  
+  /** Queue of image data URLs waiting to be sent to the AI */
+  const [pendingSnapshots, setPendingSnapshots] = useState<string[]>([])
+  
+  /** Context for an automatic AI diagnosis of a render error */
+  const [pendingDiagnosis, setPendingDiagnosis] = useState<{ readonly error: string; readonly code: string } | null>(null)
+
+  // --- Dialog Helpers ---
+
+  /**
+   * Displays a modal confirmation dialog and returns a promise resolving to the user's choice.
+   */
   const showConfirm = useCallback(
     (title: string, message: string, options?: { confirmLabel?: string; cancelLabel?: string }) => {
       return new Promise<boolean>((resolve) => {
@@ -78,6 +143,9 @@ function App() {
     []
   )
 
+  /**
+   * Displays a modal alert dialog.
+   */
   const showAlert = useCallback((title: string, message: string, confirmLabel = 'OK') => {
     return new Promise<void>((resolve) => {
       setDialogState({
@@ -176,8 +244,8 @@ function App() {
       if (settings.llm.provider === 'gateway') {
         setOpenRouterKeySet(!!settings.llm.gatewayLicenseKey?.trim())
       } else if (settings.llm.provider === 'openrouter') {
-        const key = await window.electronAPI.getOpenRouterKey()
-        setOpenRouterKeySet(!!key)
+        const configured = await window.electronAPI.getOpenRouterConfigured()
+        setOpenRouterKeySet(configured)
       } else {
         setOpenRouterKeySet(null)
       }
@@ -221,23 +289,32 @@ function App() {
     }
   }, [isRecentMenuOpen, recentMenuRef, setIsRecentMenuOpen])
 
+  /**
+   * Triggers the STL generation process for the current code.
+   * Communicates with the main process to execute the CAD engine.
+   */
   const handleRender = useCallback(async () => {
     setIsRendering(true)
     setRenderError(null)
     try {
       const result = await window.electronAPI.renderStl(code)
-      if (result.success) {
+      if (result.success && result.stlBase64) {
         setStlBase64(result.stlBase64)
         setPreviewImage(null)
+      } else if (!result.success && 'error' in result && result.error) {
+        setRenderError(result.error)
       }
-    } catch (error) {
-      logger.error('Render error', error)
-      setRenderError(getErrorMsg(error) || 'Failed to render')
+    } catch (error: unknown) {
+      logger.error('Render operation failed', error)
+      setRenderError(getErrorMsg(error) || 'Failed to render geometry')
     } finally {
       setIsRendering(false)
     }
   }, [code])
 
+  /**
+   * Updates the native window title bar based on current file and modification status.
+   */
   useEffect(() => {
     const updateTitle = async () => {
       let title = 'Torrify'
@@ -252,6 +329,10 @@ function App() {
     updateTitle()
   }, [fileOps.currentFilePath, fileOps.hasUnsavedChanges])
 
+  /**
+   * Specialized handler for loading a specific file from the history.
+   * Supports both raw CAD files and .scadgpt project bundles.
+   */
   const handleOpenRecentFile = useCallback(
     async (filePath: string) => {
       const confirmed = await confirmUnsavedChanges()
@@ -272,7 +353,7 @@ function App() {
             setStlBase64(project.stlBase64 ?? null)
             setPreviewImage(null)
             setRenderError(null)
-            fileOps.setCurrentFilePath(null)
+            fileOps.setCurrentFilePath(result.filePath)
             fileOps.setOriginalCode(project.code ?? fileOps.DEFAULT_CODE)
             fileOps.setHasUnsavedChanges(false)
             setEditorKey((prev) => prev + 1)
@@ -290,6 +371,7 @@ function App() {
           setIsRecentMenuOpen(false)
           await loadRecentFiles()
         } else if (result.error) {
+          // Handle cases where a recent file was moved or deleted
           if (result.error.includes('no longer exists')) {
             const remove = await showConfirm(
               'Remove recent file?',
@@ -304,7 +386,7 @@ function App() {
             await showAlert('Open File Failed', `Failed to open file: ${result.error}`)
           }
         }
-      } catch (error) {
+      } catch (error: unknown) {
         await showAlert('Open File Failed', `Failed to open file: ${getErrorMsg(error)}`)
       }
     },
@@ -357,6 +439,9 @@ function App() {
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [fileOps.handleOpenFile, fileOps.handleNewFile, fileOps.handleSaveAs, fileOps.handleSaveFile, fileOps.currentFilePath, fileOps])
 
+  /**
+   * Persists the current IDE state (code + chat) into a .scadgpt project file.
+   */
   const handleSaveProject = useCallback(async () => {
     const project = {
       version: 1,
@@ -366,12 +451,21 @@ function App() {
       chat: messages.map((m) => ({ ...m, timestamp: m.timestamp.toISOString() }))
     }
     try {
-      await window.electronAPI.saveProject(project)
-    } catch (error) {
-      logger.error('Save project failed', error)
+      const result = await window.electronAPI.saveProject(project, fileOps.currentFilePath ?? undefined)
+      if (!result.canceled && result.filePath) {
+        fileOps.setCurrentFilePath(result.filePath)
+        fileOps.setHasUnsavedChanges(false)
+        fileOps.setOriginalCode(code)
+        await loadRecentFiles()
+      }
+    } catch (error: unknown) {
+      logger.error('Project save failed', error)
     }
-  }, [code, stlBase64, messages])
+  }, [code, stlBase64, messages, fileOps, loadRecentFiles])
 
+  /**
+   * Restores a .scadgpt project from disk.
+   */
   const handleLoadProject = useCallback(async () => {
     try {
       const result = await window.electronAPI.loadProject()
@@ -388,7 +482,7 @@ function App() {
       setStlBase64(project.stlBase64 ?? null)
       setPreviewImage(null)
       setRenderError(null)
-      fileOps.setCurrentFilePath(null)
+      fileOps.setCurrentFilePath(result.filePath!)
       fileOps.setOriginalCode(project.code ?? fileOps.DEFAULT_CODE)
       fileOps.setHasUnsavedChanges(false)
       setEditorKey((prev) => prev + 1)
@@ -402,26 +496,33 @@ function App() {
       } else {
         setMessages(fileOps.getDefaultMessages(cadBackend))
       }
-    } catch (error) {
+      await loadRecentFiles()
+    } catch (error: unknown) {
       await showAlert('Load Project Failed', `Failed to load project: ${getErrorMsg(error)}`)
     }
-  }, [showAlert, fileOps, cadBackend])
+  }, [showAlert, fileOps, cadBackend, loadRecentFiles])
 
+  /**
+   * Exports raw source code to a backend-specific file (e.g., .scad or .py).
+   */
   const handleExportScad = useCallback(async () => {
     try {
-      await window.electronAPI.exportScad(code, cadBackend)
-    } catch (error) {
+      await window.electronAPI.exportScad(code, cadBackend, fileOps.currentFilePath ?? undefined)
+    } catch (error: unknown) {
       logger.error('Export source failed', error)
     }
-  }, [code, cadBackend])
+  }, [code, cadBackend, fileOps.currentFilePath])
 
+  /**
+   * Exports rendered geometry to a standard STL file.
+   */
   const handleExportStl = useCallback(async () => {
     try {
-      await window.electronAPI.exportStl(stlBase64)
-    } catch (error) {
+      await window.electronAPI.exportStl(stlBase64, fileOps.currentFilePath ?? undefined)
+    } catch (error: unknown) {
       logger.error('Export STL failed', error)
     }
-  }, [stlBase64])
+  }, [stlBase64, fileOps.currentFilePath])
 
   const updateLlmSettings = useCallback(async (updater: (llm: Settings['llm']) => Settings['llm']) => {
     const settings = await window.electronAPI.getSettings()
@@ -431,8 +532,8 @@ function App() {
     if (updated.llm.provider === 'gateway') {
       setOpenRouterKeySet(!!updated.llm.gatewayLicenseKey?.trim())
     } else if (updated.llm.provider === 'openrouter') {
-      const key = await window.electronAPI.getOpenRouterKey()
-      setOpenRouterKeySet(!!key)
+      const configured = await window.electronAPI.getOpenRouterConfigured()
+      setOpenRouterKeySet(configured)
     } else {
       setOpenRouterKeySet(null)
     }
@@ -524,6 +625,11 @@ function App() {
             onRender={handleRender}
             editorKey={editorKey}
             cadBackend={cadBackend}
+            isProAuthenticated={isProAuthenticated}
+            onOpenSettings={() => {
+              setSettingsInitialTab('ai')
+              setIsSettingsOpen(true)
+            }}
           />
         </div>
         <div className="w-[30%]">
@@ -554,8 +660,10 @@ function App() {
 
       <SettingsModal
         isOpen={isSettingsOpen}
+        initialTab={settingsInitialTab ?? undefined}
         onClose={async () => {
           setIsSettingsOpen(false)
+          setSettingsInitialTab(null)
           await refreshSettings()
           const shouldShow = await window.electronAPI.shouldShowWelcome()
           setIsWelcomeOpen(shouldShow)

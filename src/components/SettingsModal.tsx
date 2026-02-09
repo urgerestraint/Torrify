@@ -15,6 +15,8 @@ import {
 interface SettingsModalProps {
   isOpen: boolean
   onClose: () => void
+  /** When provided, opens with this tab active (e.g. when opening from Configure PRO) */
+  initialTab?: SettingsTab
 }
 
 const CONTEXT_URLS = {
@@ -24,7 +26,7 @@ const CONTEXT_URLS = {
 
 const TAB_ORDER: SettingsTab[] = ['general', 'ai', 'knowledge']
 
-function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
+function SettingsModal({ isOpen, onClose, initialTab }: SettingsModalProps) {
   const [settings, setSettings] = useState<Settings | null>(null)
   const [pathValid, setPathValid] = useState<boolean | null>(null)
   const [pythonPathValid, setPythonPathValid] = useState<{
@@ -59,7 +61,19 @@ function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
 
   const loadSettings = useCallback(async () => {
     try {
-      const loadedSettings = await window.electronAPI.getSettings()
+      let loadedSettings = await window.electronAPI.getSettings()
+      // Migrate deprecated anthropic provider to gemini (not implemented, no API key)
+      if (loadedSettings.llm.provider === 'anthropic') {
+        loadedSettings = {
+          ...loadedSettings,
+          llm: {
+            ...loadedSettings.llm,
+            provider: 'gemini',
+            model: DEFAULT_MODELS.gemini
+          }
+        }
+        await window.electronAPI.saveSettings(loadedSettings)
+      }
       setSettings(loadedSettings)
       checkPath(loadedSettings.openscadPath)
       checkPythonPath(loadedSettings.build123dPythonPath)
@@ -84,8 +98,9 @@ function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
     if (isOpen) {
       loadSettings()
       loadContextStatus()
+      if (initialTab) setActiveTab(initialTab)
     }
-  }, [isOpen, loadSettings, loadContextStatus])
+  }, [isOpen, loadSettings, loadContextStatus, initialTab])
 
   useEffect(() => {
     if (!isOpen) return
@@ -110,8 +125,8 @@ function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
       return
     }
     window.electronAPI
-      .getOpenRouterKey()
-      .then((key) => setOpenRouterKeySet(!!key))
+      .getOpenRouterConfigured()
+      .then(setOpenRouterKeySet)
       .catch(() => setOpenRouterKeySet(false))
   }, [isOpen, settings])
 
@@ -279,8 +294,8 @@ function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
           return
         }
       } else if (settings.llm.provider === 'openrouter') {
-        const key = await window.electronAPI.getOpenRouterKey()
-        if (!key) {
+        const configured = await window.electronAPI.getOpenRouterConfigured()
+        if (!configured) {
           setSaveMessage('OpenRouter API key is required (set OPENROUTER_API_KEY in environment)')
           return
         }

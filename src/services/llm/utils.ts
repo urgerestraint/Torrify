@@ -2,22 +2,59 @@ import type { CADBackend, LLMMessage, StreamCallback } from './types'
 import { getSystemPrompt, getSystemPromptBlocks } from './prompts'
 import { logger } from '../../utils/logger'
 
-export type MessageContentPart = { type: 'text' | 'image_url'; text?: string; image_url?: { url: string } }
-export type MessageContent = string | MessageContentPart[]
+/**
+ * Represents a single part of a multi-modal message (text or image).
+ */
+export type MessageContentPart = { 
+  readonly type: 'text' | 'image_url'
+  readonly text?: string
+  readonly image_url?: { readonly url: string } 
+}
 
-export type SystemContentPart = { type: 'text'; text: string; cache_control?: { type: 'ephemeral' } }
-export type SystemMessageContent = string | SystemContentPart[]
+/**
+ * The content of an LLM message, either a raw string or an array of parts.
+ */
+export type MessageContent = string | readonly MessageContentPart[]
 
-const CACHE_CAPABLE_MODEL_PREFIXES = [
+/**
+ * Represents a part of a system message, potentially with cache control.
+ */
+export type SystemContentPart = { 
+  readonly type: 'text'
+  readonly text: string
+  readonly cache_control?: { readonly type: 'ephemeral' } 
+}
+
+/**
+ * The content of a system prompt, potentially optimized for caching.
+ */
+export type SystemMessageContent = string | readonly SystemContentPart[]
+
+/**
+ * Provider-specific prefixes for models that support prompt caching.
+ */
+const CACHE_CAPABLE_MODEL_PREFIXES: readonly string[] = [
   'anthropic/',
   'google/',
 ] as const
 
+/**
+ * Checks if the specified model identifier supports prompt caching features.
+ * 
+ * @param model - The model identifier string
+ * @returns True if the model supports prompt caching
+ */
 const supportsPromptCaching = (model: string): boolean => {
   const normalized = model.toLowerCase().trim()
   return CACHE_CAPABLE_MODEL_PREFIXES.some((prefix) => normalized.startsWith(prefix))
 }
 
+/**
+ * Constructs the system prompt content, potentially using multi-part caching blocks.
+ * 
+ * @param params - Construction parameters including model, backend, and context
+ * @returns The structured system message content
+ */
 export const buildSystemContent = ({
   model,
   cadBackend,
@@ -41,15 +78,28 @@ export const buildSystemContent = ({
 
   const { staticBlocks, dynamicBlock } = getSystemPromptBlocks(cadBackend, currentCode, apiContext)
   const parts: SystemContentPart[] = []
+  
   for (const block of staticBlocks) {
-    parts.push({ type: 'text', text: block, cache_control: { type: 'ephemeral' } })
+    parts.push({ 
+      type: 'text', 
+      text: block, 
+      cache_control: { type: 'ephemeral' } 
+    })
   }
+
   if (dynamicBlock) {
     parts.push({ type: 'text', text: dynamicBlock })
   }
+
   return parts
 }
 
+/**
+ * Transforms an internal LLMMessage into the format expected by multi-modal providers.
+ * 
+ * @param message - The internal message object
+ * @returns Structured content part array or a raw string
+ */
 export const buildMessageContent = (message: LLMMessage): MessageContent => {
   const imageDataUrls = message.imageDataUrls ?? []
   if (imageDataUrls.length === 0) {
@@ -66,6 +116,12 @@ export const buildMessageContent = (message: LLMMessage): MessageContent => {
   return parts
 }
 
+/**
+ * Safely extracts text content from various LLM response structures.
+ * 
+ * @param content - The raw content value from an LLM response
+ * @returns The extracted string content, or an empty string if invalid
+ */
 export const extractContent = (content: unknown): string => {
   if (typeof content === 'string') {
     return content
@@ -79,6 +135,15 @@ export const extractContent = (content: unknown): string => {
   return ''
 }
 
+/**
+ * Streams a Server-Sent Events (SSE) response and parses chat completion chunks.
+ * Specifically handles the OpenAI/OpenRouter standard data format.
+ * 
+ * @param response - The Fetch API Response object
+ * @param onChunk - Callback for each received text fragment
+ * @param loggerPrefix - Optional prefix for debug log messages
+ * @throws {Error} If the response body is not readable
+ */
 export const streamSseResponse = async (
   response: Response,
   onChunk: StreamCallback,
@@ -93,40 +158,62 @@ export const streamSseResponse = async (
   let accumulated = ''
   let buffer = ''
 
-  while (true) {
-    const { done, value } = await reader.read()
+  try {
+    while (true) {
+      const { done, value } = await reader.read()
 
-    if (done) {
-      onChunk('', accumulated, true)
-      break
-    }
-
-    buffer += decoder.decode(value, { stream: true })
-    const lines = buffer.split('\n')
-    buffer = lines.pop() || ''
-
-    for (const line of lines) {
-      const trimmedLine = line.trim()
-      if (!trimmedLine || trimmedLine.startsWith(':')) {
-        continue
-      }
-      if (trimmedLine.startsWith('data: ')) {
-        const data = trimmedLine.slice(6)
-        if (data === '[DONE]') {
-          onChunk('', accumulated, true)
-          return
+      if (done) {
+        if (loggerPrefix) {
+          logger.debug(`[${loggerPrefix}] SSE stream reader done`, { 
+            accumulatedLength: accumulated.length 
+          })
         }
-        try {
-          const parsed = JSON.parse(data)
-          const delta = parsed?.choices?.[0]?.delta?.content
-          if (delta) {
-            accumulated += delta
-            onChunk(delta, accumulated, false)
+        onChunk('', accumulated, true)
+        break
+      }
+
+      buffer += decoder.decode(value, { stream: true })
+      const lines = buffer.split('\n')
+      buffer = lines.pop() || ''
+
+      for (const line of lines) {
+        const trimmedLine = line.trim()
+        if (!trimmedLine || trimmedLine.startsWith(':')) {
+          continue
+        }
+        
+        if (trimmedLine.startsWith('data: ')) {
+          const data = trimmedLine.slice(6)
+          
+          if (data === '[DONE]') {
+            if (loggerPrefix) {
+              logger.debug(`[${loggerPrefix}] SSE [DONE]`, { 
+                accumulatedLength: accumulated.length 
+              })
+            }
+            onChunk('', accumulated, true)
+            return
           }
-        } catch {
-          logger.warn(`${loggerPrefix ? `[${loggerPrefix}] ` : ''}Failed to parse SSE chunk:`, data)
+
+          try {
+            const parsed = JSON.parse(data)
+            const delta = parsed?.choices?.[0]?.delta?.content
+            if (delta) {
+              accumulated += delta
+              onChunk(delta, accumulated, false)
+            }
+          } catch {
+            if (loggerPrefix) {
+              logger.warn(`[${loggerPrefix}] Failed to parse SSE chunk:`, data)
+            }
+          }
         }
       }
     }
+  } catch (error) {
+    logger.error(`${loggerPrefix ? `[${loggerPrefix}] ` : ''}SSE streaming error`, error)
+    throw error
+  } finally {
+    reader.releaseLock()
   }
 }

@@ -1,85 +1,46 @@
-# Troubleshooting Guide
-
-This guide covers common issues you might encounter while using Torrify and provides solutions to resolve them.
+# Troubleshooting
 
 ## Common Issues
 
-### 1. OpenSCAD Not Found
-**Error**: "OpenSCAD executable not found" or render failures.
-
-**Cause**: Torrify cannot locate the OpenSCAD executable on your system.
-
+### OpenSCAD Not Found
+**Error**: "OpenSCAD executable not found"
 **Solution**:
-1. Ensure OpenSCAD is installed. Download it from [openscad.org](https://openscad.org/).
-2. Open Torrify Settings (click the gear icon).
-3. In the "General" tab, verify the "OpenSCAD Executable Path".
-4. If the path is incorrect, browse and select the correct `openscad.exe` (Windows) or `OpenSCAD.app` (macOS).
+1.  Install OpenSCAD from [openscad.org](https://openscad.org/).
+2.  Go to **Settings > General**.
+3.  Update **OpenSCAD Executable Path** to point to your installation (e.g., `C:\Program Files\OpenSCAD\openscad.exe`).
 
-### 2. Python Not Found for build123d
-**Error**: "Python not found" or build123d render failures.
-
-**Cause**: The build123d backend requires a valid Python installation with the `build123d` package installed.
-
+### Python Not Found
+**Error**: "Python not found" (when using build123d)
 **Solution**:
-1. Ensure Python 3.10+ is installed.
-2. Install the required package: `pip install build123d`
-3. In Torrify Settings → General, verify the "Python Interpreter Path".
-4. Ensure the selected Python interpreter has access to the `build123d` library.
+1.  Install Python 3.10+.
+2.  Run `pip install build123d`.
+3.  Go to **Settings > General** and verify the **Python Interpreter Path**.
 
-### 3. Ollama Connection Issues
-**Error**: "Failed to connect to Ollama" or AI response errors.
-
-**Cause**: Ollama is not running or is not accessible at the default address.
-
+### AI Connection Failed
+**Error**: "Failed to connect" or authentication errors.
 **Solution**:
-1. Ensure Ollama is installed and running (`ollama serve`).
-2. Verify Ollama is accessible at `http://127.0.0.1:11434`.
-3. If running in a container or non-standard port, check your network configuration.
-4. Ensure no firewall is blocking the connection.
+1.  **Check API Key**: Verify your key in **Settings > AI Configuration**.
+2.  **Ollama**: Ensure `ollama serve` is running and accessible at `http://127.0.0.1:11434`.
+3.  **Network**: Check for firewalls or proxy settings blocking the connection.
 
-### 4. API Key Configuration
-**Error**: "Invalid API Key" or authentication errors.
-
-**Cause**: The API key for Gemini or OpenRouter is missing or incorrect.
-
+### Render Failed
+**Error**: 3D preview does not update.
 **Solution**:
-1. Open Settings -> "AI Configuration".
-2. Select your provider (Gemini or OpenRouter).
-3. Re-enter your API key carefully.
-4. Ensure you have not exceeded your quota for the respective service.
+1.  Check the **Editor** for syntax errors.
+2.  Check the **Chat Panel** for error messages from the backend.
+3.  Try a simple model (e.g., `cube([10,10,10]);`) to verify the backend is working.
 
-### 5. "Render Failed" Errors
-**Error**: The 3D preview does not update or shows an error.
+## Performance
+If rendering is slow:
+1.  Reduce `$fn` (resolution) in your SCAD code.
+2.  Use `render()` to cache complex geometry in OpenSCAD.
+3.  Simplify geometry where possible.
 
-**Cause**: The code generated (or written) contains syntax errors that the CAD backend cannot process.
-
-**Solution**:
-1. Check the "Chat Panel" or "Editor" for error messages.
-2. Review your code for syntax errors (missing semicolons in OpenSCAD, indentation in Python).
-3. Try a simpler model to verify the backend is working.
-4. Check the logs if you are running in developer mode.
-
-### 6. Performance with Large Models
-**Issue**: The application becomes slow or unresponsive when rendering complex models.
-
-**Cause**: Complex CSG operations (unions, differences of many objects) can be computationally expensive.
-
-**Solution**:
-1. Simplify your model geometry where possible.
-2. Increase the `$fn` value (resolution) only when necessary.
-3. In OpenSCAD, use `render()` module to cache geometry.
-
-## Getting Help
-
-If you continue to experience issues, please contact support:
-
-*   **Email**: hello@torrify.org
-*   **Issue Tracker**: [GitHub Issues](https://github.com/caseyhartnett/torrify/issues)
+## Support
+*   **Email**: [hello@torrify.org](mailto:hello@torrify.org)
+*   **Issues**: [GitHub Issues](https://github.com/caseyhartnett/torrify/issues)
 
 ## Logs
-
-If you are reporting a bug, providing logs can be helpful.
-
 *   **Windows**: `%APPDATA%\torrify\logs`
 *   **macOS**: `~/Library/Logs/torrify`
 *   **Linux**: `~/.config/torrify/logs`

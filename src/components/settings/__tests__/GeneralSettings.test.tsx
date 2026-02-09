@@ -10,7 +10,7 @@ const defaultSettings: Settings = {
   build123dPythonPath: 'python',
   llm: {
     provider: 'gemini',
-    model: 'gemini-2.0-flash-exp',
+    model: 'gemini-3-flash',
     apiKey: '',
     enabled: true,
     temperature: 0.7,

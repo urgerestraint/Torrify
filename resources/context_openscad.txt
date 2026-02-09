@@ -1,120 +1,95 @@
-# OpenSCAD API Reference
-# Generated: 2026-01-25T05:02:41.167Z
-# Source: https://openscad.org/cheatsheet/
+```openscad
+/* OPENSCAD CONTEXT GUIDE FOR LLM GENERATION */
 
-## Special Variables
-- $fa
-- $fs
-- $fn
-- $vpr
-- $vpt
-- $vpd
-- $vpf
-- $children
-- $preview
+// --- Special Variables ---
+$fn = 64;           // Resolution: number of fragments in a full circle
+$fa = 12;           // Minimum angle for fragments
+$fs = 2;            // Minimum size of fragments
+$t = 0;             // Animation time (0.0 to 1.0)
+$children;          // Number of child modules passed to a module
+$preview;           // Boolean: true if in OpenSCAD preview mode, false if rendering
 
-## 2D Primitives
-circle(r|d)
-square(size, center)
-polygon(points, paths)
-text(text, size, font, halign, valign, spacing, direction, language, script)
+// --- 3D Primitives ---
+cube(size=[x,y,z], center=true|false);
+sphere(r=radius | d=diameter);
+cylinder(h=height, r=radius | d=diameter, center=true|false);
+cylinder(h=height, r1=bottom_r, r2=top_r, center=true|false); // Cones
+polyhedron(points=[[x,y,z],...], faces=[[p1,p2,p3],...], convexity=10);
 
-## 3D Primitives
-sphere(r|d)
-cube(size, center)
-cylinder(h, r|d, r1|d1, r2|d2, center)
-polyhedron(points, faces, convexity)
+// --- 2D Primitives ---
+square(size=[x,y], center=true|false);
+circle(r=radius | d=diameter);
+polygon(points=[[x,y],...], paths=[[p1,p2,p3],...]);
+text(text="string", size=10, font="Arial", halign="left|center|right", valign="baseline|top|center|bottom", spacing=1, direction="ltr", language="en", script="latin");
 
-## Transformations
-translate(v)
-rotate(a, v)
-scale(v)
-resize(newsize, auto)
-mirror(v)
-multmatrix(m)
-color(c, alpha)
-offset(r|delta, chamfer)
-hull()
-minkowski()
+// --- Boolean (CSG) ---
+union() { children(); }        // Combine objects
+difference() { base(); sub(); } // Subtract 'sub' from 'base'
+intersection() { a(); b(); }    // Keep only overlapping volume
 
-## Boolean Operations
-union()
-difference()
-intersection()
+// --- Transforms ---
+translate([x, y, z]) { children(); }
+rotate([a_x, a_y, a_z]) { children(); } // Rotation in degrees
+rotate(a, v=[x, y, z]) { children(); }  // Rotate 'a' degrees around vector 'v'
+scale([x, y, z]) { children(); }
+resize([x, y, z], auto=[b,b,b]) { children(); }
+mirror([x, y, z]) { children(); }       // Mirror across plane normal to vector
+offset(r=radius | delta=d, chamfer=true|false) { children(); } // 2D only
+multmatrix(m) { children(); }           // 4x4 transformation matrix
+color("name" | [r,g,b,a]) { children(); }
 
-## Modifiers
-* - disable
-! - show only
-# - highlight/debug
-% - transparent/background
+// --- High-Level Operations ---
+hull() { children(); }          // Convex hull of children
+minkowski() { children(); }     // Sum of shapes (e.g., rounding edges)
+linear_extrude(height=10, center=true, convexity=10, twist=0, slices=20, scale=1.0) { 2d_shape(); }
+rotate_extrude(angle=360, convexity=10) { 2d_shape(); } // Sweep 2D shape around Z-axis
+projection(cut=true|false) { 3d_shape(); } // Project 3D to 2D
 
-## Control Flow
-for (variable = [start : increment : end]) { ... }
-for (variable = [value1, value2, ...]) { ... }
+// --- Logic & Loops ---
+for (i = [start : increment : end]) { ... }
+for (i = [val1, val2, val3]) { ... }
+intersection_for(i = [start : end]) { ... } // Intersection of all generated shapes
 if (condition) { ... } else { ... }
-let (assignments) expression
-intersection_for(variable = [values]) { ... }
+let (a = 1, b = 2) { ... } // Scoped variable assignment
 
-## Mathematical Functions
-abs(x)
-sign(x)
-sin(x), cos(x), tan(x)
-asin(x), acos(x), atan(x), atan2(y, x)
-floor(x), ceil(x), round(x)
-ln(x), log(x), exp(x), pow(base, exp)
-sqrt(x)
-min(values), max(values)
-norm(v), cross(v1, v2)
+// --- List Comprehensions & Vector Math ---
+// List Comprehension: [ for (i = range/list) if (condition) result ]
+points = [ for (a = [0 : 30 : 360]) [sin(a)*10, cos(a)*10] ];
+filtered = [ for (i = [0:10]) if (i % 2 == 0) i*i ];
 
-## String Functions
-str(values)
-chr(number)
-ord(string)
-len(string|array)
-search(match, string|array, num_returns, index_col)
+// Vector Math: Standard operators work on arrays
+v1 = [1, 2, 3]; v2 = [4, 5, 6];
+v3 = v1 + v2; // [5, 7, 9]
+v4 = v1 * 10; // [10, 20, 30]
 
-## Type Functions
-is_undef(x), is_bool(x), is_num(x), is_string(x), is_list(x), is_function(x)
+// --- Modifiers ---
+* // Disable: Ignore this subtree
+! // Show Only: Ignore everything else in the root
+# // Highlight: Show in transparent red (debug)
+% // Background: Render as transparent gray (not part of final geometry)
 
-## List Operations
-concat(lists)
-lookup(value, table)
+// --- Patterns (The Grammar) ---
 
-## Special Variables
-$fa - minimum angle for circle fragments
-$fs - minimum size of circle fragments  
-$fn - number of circle fragments (overrides $fa and $fs)
-$t - animation time (0 to 1)
-$vpr - viewport rotation
-$vpt - viewport translation
-$vpd - viewport distance
-$vpf - viewport field of view
-$children - number of child modules
-$preview - true in preview mode, false when rendering
+// 1. 2D to 3D Workflow
+linear_extrude(height=5) 
+    offset(r=2) 
+        square([10, 10], center=true);
 
-## Modules
-module name(parameters) { ... }
-children()
-children(index)
-children([start : step : end])
+// 2. Subtract Pattern (Holes)
+difference() {
+    cube([20, 20, 10], center=true);
+    // Use Negative Space for clean manifold cuts
+    translate([0, 0, -0.1]) 
+        cylinder(h=10.2, r=5, center=true);
+}
 
-## Functions
-function name(parameters) = expression;
+// 3. Parametric Module
+module bolt_hole(d=5, h=10) {
+    cylinder(d=d, h=h+0.2, center=true, $fn=32);
+}
 
-## Import/Export
-import(file, convexity)
-surface(file, center, convexity)
-render(convexity)
-projection(cut)
-
-## Echo and Assert
-echo(values)
-assert(condition, message)
-
-## BOSL2 Library (Recommended)
-# If using BOSL2, prefer these patterns:
-include <BOSL2/std.scad>
-up(z), down(z), left(x), right(x), fwd(y), back(y)
-attach(anchor, spin, orient)
-position(anchor)
-reorient(anchor, spin, orient)
+// 4. Grid Placement
+for (x = [0:10:30], y = [0:10:30]) {
+    translate([x, y, 0]) circle(d=5);
+}
+```

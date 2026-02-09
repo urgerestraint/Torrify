@@ -1,70 +1,105 @@
 // CAD Backend types and interfaces
 
+/**
+ * Supported Computer-Aided Design (CAD) backends.
+ */
 export type CADBackend = 'openscad' | 'build123d'
 
+/**
+ * Configuration for the active CAD backend service.
+ */
 export interface CADConfig {
-  backend: CADBackend
-  openscad?: {
-    path: string
+  /** The backend to use for rendering */
+  readonly backend: CADBackend
+  /** OpenSCAD-specific configuration */
+  readonly openscad?: {
+    /** Absolute path to the OpenSCAD executable */
+    readonly path: string
   }
-  build123d?: {
-    pythonPath: string
+  /** build123d-specific configuration */
+  readonly build123d?: {
+    /** Absolute path to the Python interpreter with build123d installed */
+    readonly pythonPath: string
   }
 }
 
+/**
+ * Result of a CAD render operation.
+ */
 export interface CADRenderResult {
-  success: boolean
-  stlBase64?: string
-  error?: string
-  timestamp: number
+  /** Whether the render completed successfully */
+  readonly success: boolean
+  /** The rendered STL data as a base64 string (null if failed) */
+  readonly stlBase64?: string
+  /** Human-readable error message if success is false */
+  readonly error?: string
+  /** Unix timestamp when the render completed */
+  readonly timestamp: number
 }
 
+/**
+ * Result of a backend configuration validation check.
+ */
 export interface CADValidationResult {
-  valid: boolean
-  error?: string
-  version?: string
+  /** Whether the backend is valid and ready to use */
+  readonly valid: boolean
+  /** Reason for validation failure, if any */
+  readonly error?: string
+  /** Version string reported by the backend (e.g. "OpenSCAD 2021.01") */
+  readonly version?: string
 }
 
+/**
+ * Generic interface for a CAD backend service.
+ * Implementations handle code execution and geometry extraction.
+ */
 export interface CADService {
   /**
-   * Render code to STL and return base64-encoded result
+   * Compiles and renders CAD code into an STL file.
+   * 
+   * @param code - The source code to render
+   * @returns A promise resolving to the render result (STL data or error)
    */
   renderStl(code: string): Promise<CADRenderResult>
   
   /**
-   * Validate that the backend is properly configured and available
+   * Verifies that the backend executable and dependencies are correctly installed.
+   * @returns A promise resolving to the validation status
    */
   validateSetup(): Promise<CADValidationResult>
   
   /**
-   * Get the display name of this backend
+   * Returns the human-friendly name of the backend.
    */
   getBackendName(): string
   
   /**
-   * Get the file extension for source files (e.g., 'scad', 'py')
+   * Returns the preferred file extension for this backend (e.g., 'scad', 'py').
    */
   getFileExtension(): string
   
   /**
-   * Get the Monaco editor language identifier
+   * Returns the language identifier for syntax highlighting (e.g., 'python').
    */
   getLanguage(): string
 }
 
-// Backend metadata
+/**
+ * Static metadata for each supported CAD backend.
+ * Used for UI display, editor configuration, and default code templates.
+ */
 export const BACKEND_INFO: Record<CADBackend, {
-  name: string
-  description: string
-  fileExtension: string
-  language: string
-  defaultCode: string
+  readonly name: string
+  readonly description: string
+  readonly fileExtension: string
+  readonly language: string
+  readonly defaultCode: string
 }> = {
   openscad: {
     name: 'OpenSCAD',
     description: 'OpenSCAD - The Programmers Solid 3D CAD Modeller',
     fileExtension: 'scad',
-    language: 'c',  // Using C as proxy for OpenSCAD
+    language: 'scad', // Note: using scad if available in Monaco
     defaultCode: '// OpenSCAD code\ncube([10, 10, 10]);'
   },
   build123d: {

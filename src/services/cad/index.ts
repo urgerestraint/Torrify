@@ -1,12 +1,22 @@
-// CAD Service Factory
+/**
+ * CAD Service Factory and Configuration Utilities.
+ * 
+ * Note: Actual CAD geometry processing happens in the Electron main process.
+ * This file provides types and configurations for the renderer to communicate
+ * with those services via IPC.
+ */
 
 import type { CADConfig, CADBackend } from './types'
 export * from './types'
 
-// Note: The actual service implementations run in the Electron main process
-// This factory creates a proxy that communicates via IPC
-// The real implementations are in electron/cad/ directory
-
+/**
+ * Creates a configuration object for the CAD service.
+ * 
+ * @param backend - The active CAD backend ('openscad' or 'build123d')
+ * @param openscadPath - Absolute path to the OpenSCAD executable
+ * @param build123dPythonPath - Absolute path to the Python interpreter for build123d
+ * @returns A consolidated CAD configuration object
+ */
 export function createCADServiceConfig(
   backend: CADBackend,
   openscadPath?: string,
@@ -19,14 +29,18 @@ export function createCADServiceConfig(
   }
 }
 
-// Backend display names for UI
-export const BACKEND_NAMES: Record<CADBackend, string> = {
+/**
+ * Human-readable display names for supported CAD backends.
+ */
+export const BACKEND_NAMES: Readonly<Record<CADBackend, string>> = {
   openscad: 'OpenSCAD',
   build123d: 'build123d (Python)'
-}
+} as const
 
-// Default executable/interpreter paths by platform
-export const DEFAULT_PATHS: Record<CADBackend, Record<string, string>> = {
+/**
+ * Default executable or interpreter paths mapped by backend and platform (win32, darwin, linux).
+ */
+export const DEFAULT_PATHS: Readonly<Record<CADBackend, Record<string, string>>> = {
   openscad: {
     win32: 'C:\\Program Files\\OpenSCAD (Nightly)\\openscad.exe',
     darwin: '/Applications/OpenSCAD.app/Contents/MacOS/OpenSCAD',
@@ -37,4 +51,4 @@ export const DEFAULT_PATHS: Record<CADBackend, Record<string, string>> = {
     darwin: 'python3',
     linux: 'python3'
   }
-}
+} as const

@@ -39,7 +39,7 @@ describe('PreviewPanel', () => {
       />
     )
     
-    expect(screen.getByText('No preview yet')).toBeInTheDocument()
+    expect(screen.getByText('No model preview generated')).toBeInTheDocument()
     expect(screen.getByText(/Click "Render" or press Ctrl\+S/i)).toBeInTheDocument()
   })
 
@@ -77,7 +77,7 @@ describe('PreviewPanel', () => {
     
     expect(screen.getByText('Render Error')).toBeInTheDocument()
     expect(screen.getByText(errorMessage)).toBeInTheDocument()
-    expect(screen.getByText(/Check your code syntax or click/i)).toBeInTheDocument()
+    expect(screen.getByText(/Syntax errors detected/i)).toBeInTheDocument()
     expect(screen.getByText('Ask AI to Diagnose')).toBeInTheDocument()
   })
 
@@ -94,7 +94,7 @@ describe('PreviewPanel', () => {
       />
     )
     
-    const image = screen.getByAltText('OpenSCAD Render')
+    const image = screen.getByAltText('OpenSCAD Rendered Output')
     expect(image).toBeInTheDocument()
     expect(image).toHaveAttribute('src', mockImage)
   })

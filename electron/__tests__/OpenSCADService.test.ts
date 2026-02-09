@@ -21,7 +21,7 @@ describe('OpenSCADService', () => {
       const service = new OpenSCADService(mockExecutablePath)
       expect(service.getBackendName()).toBe('OpenSCAD')
       expect(service.getFileExtension()).toBe('scad')
-      expect(service.getLanguage()).toBe('c')
+      expect(service.getLanguage()).toBe('scad')
     })
   })
 

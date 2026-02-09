@@ -21,7 +21,7 @@ function settingsWithRecent(recentFiles: { filePath: string; lastOpened: string 
     build123dPythonPath: 'python',
     llm: {
       provider: 'gemini',
-      model: 'gemini-2.0-flash-exp',
+      model: 'gemini-3-flash',
       apiKey: '',
       enabled: false,
       temperature: 0.7,

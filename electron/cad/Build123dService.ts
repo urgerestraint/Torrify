@@ -5,11 +5,12 @@ import * as fs from 'fs'
 import * as path from 'path'
 import * as os from 'os'
 import type { CADService, CADRenderResult, CADValidationResult } from './types'
+import { createCappedBuffer } from './process-utils'
 import { logger } from '../utils/logger'
+import { MAX_OUTPUT_FILE_SIZE } from '../constants'
 
 // Constants
 const TIMEOUT_MS = 60000 // 60 seconds (Python can be slower)
-const MAX_OUTPUT_FILE_SIZE = 50 * 1024 * 1024 // 50MB
 
 // Temp directory
 const TEMP_DIR = path.join(os.tmpdir(), 'torrify')
@@ -153,19 +154,15 @@ except Exception as e:
           }
         }, TIMEOUT_MS)
 
-        let stdout = ''
-        let stderr = ''
+        const stdoutBuf = createCappedBuffer()
+        const stderrBuf = createCappedBuffer()
 
         if (pythonProcess.stdout) {
-          pythonProcess.stdout.on('data', (data) => {
-            stdout += data.toString()
-          })
+          pythonProcess.stdout.on('data', (data) => stdoutBuf.append(data))
         }
 
         if (pythonProcess.stderr) {
-          pythonProcess.stderr.on('data', (data) => {
-            stderr += data.toString()
-          })
+          pythonProcess.stderr.on('data', (data) => stderrBuf.append(data))
         }
 
         pythonProcess.on('close', (exitCode) => {
@@ -194,22 +191,24 @@ except Exception as e:
             } else {
               resolve({
                 success: false,
-                error: `STL output file not created. Output: ${stdout}\nErrors: ${stderr}`,
+                error: `STL output file not created. Output: ${stdoutBuf.value}\nErrors: ${stderrBuf.value}`,
                 timestamp: Date.now()
               })
             }
           } else {
             // Parse error message for better feedback
-            let errorMessage = stderr || stdout || `Python exited with code ${exitCode}`
+            const stderrRaw = stderrBuf.rawValue
+            const stdoutRaw = stdoutBuf.rawValue
+            let errorMessage = stderrRaw || stdoutRaw || `Python exited with code ${exitCode}`
             
             // Check for common errors - use specific marker to avoid false positives
-            if (stderr.includes('BUILD123D_NOT_INSTALLED')) {
+            if (stderrRaw.includes('BUILD123D_NOT_INSTALLED')) {
               errorMessage = 'build123d is not installed. Install it with: pip install build123d'
-            } else if (stderr.includes('No exportable geometry found')) {
+            } else if (stderrRaw.includes('No exportable geometry found')) {
               errorMessage = 'No exportable geometry found. Make sure your code creates a 3D object and assigns it to a variable.'
-            } else if (stderr.includes('ModuleNotFoundError')) {
+            } else if (stderrRaw.includes('ModuleNotFoundError')) {
               // Extract the module name from the error
-              const match = stderr.match(/No module named '([^']+)'/)
+              const match = stderrRaw.match(/No module named '([^']+)'/)
               if (match) {
                 errorMessage = `Missing Python module: ${match[1]}. Make sure all required packages are installed.`
               }
@@ -269,16 +268,11 @@ except Exception as e:
         windowsHide: true
       })
 
-      let stdout = ''
-      let stderr = ''
+      const stdoutBuf = createCappedBuffer()
+      const stderrBuf = createCappedBuffer()
 
-      process.stdout?.on('data', (data) => {
-        stdout += data.toString()
-      })
-
-      process.stderr?.on('data', (data) => {
-        stderr += data.toString()
-      })
+      process.stdout?.on('data', (data) => stdoutBuf.append(data))
+      process.stderr?.on('data', (data) => stderrBuf.append(data))
 
       const timeout = setTimeout(() => {
         process.kill()
@@ -291,7 +285,7 @@ except Exception as e:
       process.on('close', (code) => {
         clearTimeout(timeout)
         if (code === 0) {
-          const version = stdout.trim() || stderr.trim()
+          const version = stdoutBuf.rawValue.trim() || stderrBuf.rawValue.trim()
           resolve({
             valid: true,
             version: version
@@ -299,7 +293,7 @@ except Exception as e:
         } else {
           resolve({
             valid: false,
-            error: `Python check failed: ${stderr || stdout}`
+            error: `Python check failed: ${stderrBuf.value || stdoutBuf.value}`
           })
         }
       })
@@ -329,16 +323,11 @@ except ImportError:
         windowsHide: true
       })
 
-      let stdout = ''
-      let stderr = ''
+      const stdoutBuf = createCappedBuffer()
+      const stderrBuf = createCappedBuffer()
 
-      process.stdout?.on('data', (data) => {
-        stdout += data.toString()
-      })
-
-      process.stderr?.on('data', (data) => {
-        stderr += data.toString()
-      })
+      process.stdout?.on('data', (data) => stdoutBuf.append(data))
+      process.stderr?.on('data', (data) => stderrBuf.append(data))
 
       const timeout = setTimeout(() => {
         process.kill()
@@ -353,10 +342,10 @@ except ImportError:
         if (code === 0) {
           resolve({
             valid: true,
-            version: stdout.trim()
+            version: stdoutBuf.rawValue.trim()
           })
         } else {
-          const errDetail = stderr.trim() || stdout.trim() || 'build123d is not installed'
+          const errDetail = stderrBuf.rawValue.trim() || stdoutBuf.rawValue.trim() || 'build123d is not installed'
           resolve({
             valid: false,
             error: `build123d check failed: ${errDetail}. Install with: pip install build123d`

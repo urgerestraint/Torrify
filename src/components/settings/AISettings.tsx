@@ -7,9 +7,9 @@ const PRO_MODEL_GROUPS = [
     label: 'The Big Players (Premium Performance)',
     options: [
       { value: 'anthropic/claude-3.7-sonnet:thinking', label: 'Claude 3.7 Sonnet (thinking) (default)' },
-      { value: 'openai/gpt-5.2-codex', label: 'GPT-5.2 Codex' },
+      { value: 'openai/gpt-5.3-codex', label: 'GPT-5.3 Codex' },
       { value: 'anthropic/claude-sonnet-4.5', label: 'Claude Sonnet 4.5' },
-      { value: 'google/gemini-2.5-pro', label: 'Gemini 2.5 Pro' }
+      { value: 'google/gemini-3-pro-preview', label: 'Gemini 3 Pro Preview' }
     ]
   },
   {
@@ -25,7 +25,44 @@ const PRO_MODEL_GROUPS = [
     label: 'Cost-Effective Prototyping',
     options: [
       { value: 'openai/gpt-5-mini', label: 'GPT-5 Mini' },
-      { value: 'google/gemini-2.5-flash', label: 'Gemini 2.5 Flash' }
+      { value: 'google/gemini-3-flash-preview', label: 'Gemini 3 Flash Preview' }
+    ]
+  }
+]
+
+// OpenAI BYOK: direct API model IDs (platform.openai.com)
+const OPENAI_MODEL_GROUPS = [
+  {
+    label: 'Recommended (GPT-5)',
+    options: [
+      { value: 'gpt-5.2', label: 'GPT-5.2 (default, best for coding)' },
+      { value: 'gpt-5.2-pro', label: 'GPT-5.2 Pro' },
+      { value: 'gpt-5-mini', label: 'GPT-5 Mini' },
+      { value: 'gpt-5-nano', label: 'GPT-5 Nano' }
+    ]
+  },
+  {
+    label: 'GPT-5.1 & GPT-5',
+    options: [
+      { value: 'gpt-5.1', label: 'GPT-5.1' },
+      { value: 'gpt-5', label: 'GPT-5' }
+    ]
+  },
+  {
+    label: 'GPT-4o & GPT-4',
+    options: [
+      { value: 'gpt-4o', label: 'GPT-4o' },
+      { value: 'gpt-4o-mini', label: 'GPT-4o mini' },
+      { value: 'gpt-4.1', label: 'GPT-4.1' },
+      { value: 'gpt-4.1-mini', label: 'GPT-4.1 mini' },
+      { value: 'gpt-4-turbo', label: 'GPT-4 Turbo' }
+    ]
+  },
+  {
+    label: 'Legacy',
+    options: [
+      { value: 'gpt-4-turbo-preview', label: 'GPT-4 Turbo Preview (deprecated)' },
+      { value: 'gpt-3.5-turbo', label: 'GPT-3.5 Turbo' }
     ]
   }
 ]
@@ -132,7 +169,7 @@ export function AISettings({
             className="w-full bg-[#1e1e1e] text-white px-3 py-2 rounded border border-[#3e3e42] focus:outline-none focus:border-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {Object.entries(PROVIDER_NAMES)
-              .filter(([key]) => key !== 'gateway')
+              .filter(([key]) => key !== 'gateway' && key !== 'anthropic')
               .map(([key, name]) => (
                 <option key={key} value={key}>
                   {name}
@@ -178,6 +215,26 @@ export function AISettings({
               </optgroup>
             ))}
           </select>
+        ) : settings.llm.provider === 'openai' ? (
+          <>
+            <select
+              value={settings.llm.model}
+              onChange={(e) => onLLMChange('model', e.target.value)}
+              disabled={!settings.llm.enabled}
+              className="w-full bg-[#1e1e1e] text-white px-3 py-2 rounded border border-[#3e3e42] focus:outline-none focus:border-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {OPENAI_MODEL_GROUPS.map((group) => (
+                <optgroup key={group.label} label={group.label}>
+                  {group.options.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </optgroup>
+              ))}
+            </select>
+            <p className="text-xs text-gray-500 mt-1">Direct OpenAI API models. GPT-5.2 recommended for coding.</p>
+          </>
         ) : settings.llm.provider === 'ollama' && ollamaModels.length > 0 ? (
           <>
             <select
@@ -208,7 +265,7 @@ export function AISettings({
               onChange={(e) => onLLMChange('model', e.target.value)}
               disabled={!settings.llm.enabled}
               className="w-full bg-[#1e1e1e] text-white px-3 py-2 rounded border border-[#3e3e42] focus:outline-none focus:border-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
-              placeholder={settings.llm.provider === 'ollama' ? 'gpt-oss:20b' : 'gemini-2.0-flash-exp'}
+              placeholder={settings.llm.provider === 'ollama' ? 'gpt-oss:20b' : settings.llm.provider === 'gemini' ? 'gemini-3-flash' : 'e.g. claude-3-5-sonnet-20241022'}
             />
             {settings.llm.provider === 'ollama' && (
               <div className="mt-1">
@@ -246,8 +303,7 @@ export function AISettings({
               </div>
             )}
             <p className="text-xs text-gray-500 mt-1">
-              {settings.llm.provider === 'gemini' && 'Examples: gemini-2.0-flash-exp, gemini-pro'}
-              {settings.llm.provider === 'openai' && 'Examples: gpt-4-turbo-preview, gpt-3.5-turbo'}
+              {settings.llm.provider === 'gemini' && 'Examples: gemini-3-flash, gemini-3-pro'}
               {settings.llm.provider === 'anthropic' && 'Examples: claude-3-5-sonnet-20241022'}
               {settings.llm.provider === 'custom' && 'Enter your custom model identifier'}
               {settings.llm.provider === 'ollama' && ollamaModels.length === 0 && 'Examples: gpt-oss:20b, llama2, mistral'}
@@ -322,9 +378,9 @@ export function AISettings({
           <input
             type="number"
             min="256"
-            max="4096"
+            max="1000000"
             step="256"
-            value={settings.llm.maxTokens || 2048}
+            value={settings.llm.maxTokens ?? 128000}
             onChange={(e) => onLLMChange('maxTokens', parseInt(e.target.value))}
             disabled={!settings.llm.enabled}
             className="w-full bg-[#1e1e1e] text-white px-3 py-2 rounded border border-[#3e3e42] focus:outline-none focus:border-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"

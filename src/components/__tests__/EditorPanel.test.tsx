@@ -17,7 +17,7 @@ describe('EditorPanel', () => {
       />
     )
     
-    expect(screen.getByText('Code Editor')).toBeInTheDocument()
+    expect(screen.getByText('Code')).toBeInTheDocument()
     expect(screen.getByText('OpenSCAD Script')).toBeInTheDocument()
   })
 

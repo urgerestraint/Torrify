@@ -3,21 +3,54 @@ import StlViewer, { type StlViewerHandle } from './StlViewer'
 import type { CADBackend } from '../services/cad'
 import { BACKEND_NAMES } from '../services/cad'
 
+/**
+ * Props for the PreviewPanel component.
+ */
 interface PreviewPanelProps {
-  image: string | null
-  stlBase64: string | null
-  isRendering: boolean
-  error: string | null
-  onRender: () => void
-  onSendSnapshot: (dataUrl: string) => void
-  onDiagnoseError?: (error: string) => void
-  cadBackend?: CADBackend
-  hasCode?: boolean
+  /** Optional 2D rasterized preview image (e.g. from OpenSCAD) */
+  readonly image: string | null
+  /** Base64-encoded STL geometry data for the 3D viewer */
+  readonly stlBase64: string | null
+  /** Indicates if a background render operation is in progress */
+  readonly isRendering: boolean
+  /** Human-readable error message from the CAD backend */
+  readonly error: string | null
+  /** Triggered to request a fresh render of the current code */
+  readonly onRender: () => void
+  /** Callback to send a captured screenshot of the 3D model to the AI assistant */
+  readonly onSendSnapshot: (dataUrl: string) => void
+  /** Optional callback to trigger an AI diagnostic of a render error */
+  readonly onDiagnoseError?: (error: string) => void
+  /** The currently active CAD backend */
+  readonly cadBackend?: CADBackend
+  /** Indicates if there is any code content to render */
+  readonly hasCode?: boolean
 }
 
-function PreviewPanel({ image, stlBase64, isRendering, error, onRender, onSendSnapshot, onDiagnoseError, cadBackend = 'openscad', hasCode = true }: PreviewPanelProps) {
+/**
+ * The PreviewPanel orchestrates the 3D visualization and error feedback for CAD output.
+ * It provides the interface for:
+ * - Viewing 3D STL geometry via Three.js (StlViewer)
+ * - Displaying error states and providing AI diagnosis triggers
+ * - Capturing snapshots of the current view to share with the AI
+ */
+function PreviewPanel({ 
+  image, 
+  stlBase64, 
+  isRendering, 
+  error, 
+  onRender, 
+  onSendSnapshot, 
+  onDiagnoseError, 
+  cadBackend = 'openscad', 
+  hasCode = true 
+}: PreviewPanelProps) {
   const viewerRef = useRef<StlViewerHandle | null>(null)
 
+  /**
+   * Captures a high-resolution screenshot from the active 3D viewport
+   * and sends it to the chat system.
+   */
   const handleSendSnapshot = () => {
     const dataUrl = viewerRef.current?.captureImage()
     if (dataUrl) {
@@ -27,7 +60,7 @@ function PreviewPanel({ image, stlBase64, isRendering, error, onRender, onSendSn
 
   return (
     <div className="flex flex-col h-full">
-      {/* Header */}
+      {/* Panel Header */}
       <div className="px-4 py-3 border-b border-[#3e3e42] flex items-center justify-between">
         <div>
           <h2 className="text-lg font-semibold">Render Preview</h2>
@@ -46,22 +79,24 @@ function PreviewPanel({ image, stlBase64, isRendering, error, onRender, onSendSn
             onClick={handleSendSnapshot}
             disabled={!stlBase64 || isRendering}
             className="px-3 py-2 bg-[#3e3e42] hover:bg-[#4e4e52] disabled:bg-[#2d2d30] disabled:cursor-not-allowed rounded text-sm"
-            title="Send screenshot to AI"
+            title="Send screenshot of the current 3D model to AI"
           >
             Send to AI
           </button>
         </div>
       </div>
 
-      {/* Preview Area */}
+      {/* Main Preview Area */}
       <div className="flex-1 overflow-auto bg-[#252526] flex items-center justify-center p-4">
+        {/* Loading Overlay */}
         {isRendering && (
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
-            <p className="text-gray-400">Rendering...</p>
+            <p className="text-gray-400">Rendering geometry...</p>
           </div>
         )}
 
+        {/* Error Feedback State */}
         {!isRendering && error && (
           <div className="text-center max-w-md">
             <div className="text-red-500 mb-4">
@@ -70,11 +105,12 @@ function PreviewPanel({ image, stlBase64, isRendering, error, onRender, onSendSn
               </svg>
             </div>
             <h3 className="text-lg font-semibold mb-2 text-red-400">Render Error</h3>
-            <p className="text-sm text-gray-400 break-words max-h-48 overflow-y-auto">{error}</p>
+            <p className="text-sm text-gray-400 break-words max-h-48 overflow-y-auto font-mono">{error}</p>
+            
             {onDiagnoseError && (
               <button
                 onClick={() => onDiagnoseError(error)}
-                className="mt-4 px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded font-medium transition-colors text-sm inline-flex items-center gap-2"
+                className="mt-4 px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded font-medium transition-colors text-sm inline-flex items-center gap-2 shadow-lg"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
@@ -82,32 +118,36 @@ function PreviewPanel({ image, stlBase64, isRendering, error, onRender, onSendSn
                 Ask AI to Diagnose
               </button>
             )}
+            
             <p className="text-xs text-gray-500 mt-4">
-              Check your code syntax or click "Ask AI to Diagnose" for help.
+              Syntax errors detected. Click "Ask AI to Diagnose" for automated troubleshooting.
             </p>
           </div>
         )}
 
+        {/* Empty State */}
         {!isRendering && !error && !image && !stlBase64 && (
           <div className="text-center text-gray-500">
             <svg className="w-16 h-16 mx-auto mb-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
             </svg>
-            <p>No preview yet</p>
-            <p className="text-sm mt-2">Click "Render" or press Ctrl+S to generate preview</p>
+            <p>No model preview generated</p>
+            <p className="text-sm mt-2">Click "Render" or press Ctrl+S to generate the 3D view</p>
           </div>
         )}
 
+        {/* 3D STL Viewer (Preferred) */}
         {!isRendering && !error && stlBase64 && (
-          <div className="w-full h-full">
+          <div className="w-full h-full shadow-inner">
             <StlViewer ref={viewerRef} stlBase64={stlBase64} />
           </div>
         )}
 
+        {/* 2D Image Fallback (e.g. for legacy OpenSCAD modes) */}
         {!isRendering && !error && !stlBase64 && image && (
           <img
             src={image}
-            alt={`${BACKEND_NAMES[cadBackend]} Render`}
+            alt={`${BACKEND_NAMES[cadBackend]} Rendered Output`}
             className="max-w-full max-h-full object-contain rounded shadow-lg"
           />
         )}

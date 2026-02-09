@@ -22,14 +22,14 @@ describe('DemoDialog', () => {
   it('renders when isOpen is true', () => {
     render(<DemoDialog isOpen={true} onClose={mockOnClose} onRunDemo={mockOnRunDemo} />)
     expect(screen.getByText('Welcome to Torrify!')).toBeInTheDocument()
-    expect(screen.getByText(/Would you like to see a demo/i)).toBeInTheDocument()
+    expect(screen.getByText(/Would you like to see a guided walkthrough/i)).toBeInTheDocument()
   })
 
   it('displays demo steps', () => {
     render(<DemoDialog isOpen={true} onClose={mockOnClose} onRunDemo={mockOnRunDemo} />)
-    expect(screen.getByText('AI Chat Panel')).toBeInTheDocument()
-    expect(screen.getByText('Code Editor')).toBeInTheDocument()
-    expect(screen.getByText('3D Preview')).toBeInTheDocument()
+    expect(screen.getByText('AI Conversational Panel')).toBeInTheDocument()
+    expect(screen.getByText('Live Source Code')).toBeInTheDocument()
+    expect(screen.getByText('3D Visualization')).toBeInTheDocument()
   })
 
   it('has Skip Demo button', () => {
@@ -38,9 +38,9 @@ describe('DemoDialog', () => {
     expect(skipButton).toBeInTheDocument()
   })
 
-  it('has Show Demo button', () => {
+  it('has Start Guided Tour button', () => {
     render(<DemoDialog isOpen={true} onClose={mockOnClose} onRunDemo={mockOnRunDemo} />)
-    const showButton = screen.getByRole('button', { name: /show demo/i })
+    const showButton = screen.getByRole('button', { name: /start guided tour/i })
     expect(showButton).toBeInTheDocument()
   })
 
@@ -56,11 +56,11 @@ describe('DemoDialog', () => {
     expect(mockOnClose).toHaveBeenCalled()
   })
 
-  it('calls onRunDemo when Show Demo is clicked', async () => {
+  it('calls onRunDemo when Start Guided Tour is clicked', async () => {
     const user = userEvent.setup()
     render(<DemoDialog isOpen={true} onClose={mockOnClose} onRunDemo={mockOnRunDemo} />)
     
-    const showButton = screen.getByRole('button', { name: /show demo/i })
+    const showButton = screen.getByRole('button', { name: /start guided tour/i })
     await user.click(showButton)
     
     // Wait for timeout in handleRunDemo

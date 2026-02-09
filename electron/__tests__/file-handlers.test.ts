@@ -19,7 +19,12 @@ vi.mock('electron', () => ({
       handlers[channel] = fn
     })
   },
-  dialog: mockDialog
+  dialog: mockDialog,
+  app: {
+    getPath: vi.fn((name: string) =>
+      name === 'documents' ? path.join(os.homedir(), 'Documents') : os.tmpdir()
+    )
+  }
 }))
 
 vi.mock('fs')

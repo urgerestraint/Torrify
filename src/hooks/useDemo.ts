@@ -73,7 +73,7 @@ export function useDemo(setters: UseDemoSetters) {
     setRenderError(null)
     try {
       const result = await window.electronAPI.renderStl(DEMO_CODE)
-      if (result.success) {
+      if (result.success && result.stlBase64) {
         setStlBase64(result.stlBase64)
         setPreviewImage(null)
       }

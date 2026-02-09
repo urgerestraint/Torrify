@@ -1,5 +1,6 @@
-import { ipcMain, dialog } from 'electron'
+import { ipcMain, dialog, app } from 'electron'
 import * as fs from 'fs'
+import * as path from 'path'
 import { CodeSchema, FilePathSchema, CADBackendSchema } from '../validation/schemas'
 import { validatePath } from '../validation/pathValidator'
 import { addToRecentFiles } from '../settings'
@@ -24,6 +25,7 @@ export function registerFileHandlers(): void {
 
     const result = await dialog.showOpenDialog({
       title,
+      defaultPath: app.getPath('documents'),
       properties: ['openFile'],
       filters
     })
@@ -92,7 +94,7 @@ export function registerFileHandlers(): void {
 
       const result = await dialog.showSaveDialog({
         title,
-        defaultPath: defaultFileName,
+        defaultPath: path.join(app.getPath('documents'), defaultFileName),
         filters
       })
 
@@ -110,39 +112,54 @@ export function registerFileHandlers(): void {
     }
   )
 
-  ipcMain.handle('export-scad', async (_event, codeInput: unknown, backendInput?: unknown) => {
-    const codeParse = CodeSchema.safeParse(codeInput)
-    if (!codeParse.success) {
-      return { canceled: true, error: 'Invalid code input' }
+  ipcMain.handle(
+    'export-scad',
+    async (_event, codeInput: unknown, backendInput?: unknown, currentFilePath?: string) => {
+      const codeParse = CodeSchema.safeParse(codeInput)
+      if (!codeParse.success) {
+        return { canceled: true, error: 'Invalid code input' }
+      }
+      const code = codeParse.data
+      const backend = backendInput !== undefined ? CADBackendSchema.safeParse(backendInput).data : undefined
+      const isBuild123d = backend === 'build123d'
+      const ext = isBuild123d ? '.py' : '.scad'
+      const baseName =
+        currentFilePath && currentFilePath.trim()
+          ? path.basename(currentFilePath, path.extname(currentFilePath))
+          : 'model'
+      const defaultPath = path.join(app.getPath('documents'), baseName + ext)
+
+      const result = await dialog.showSaveDialog({
+        title: isBuild123d ? 'Export Python' : 'Export SCAD',
+        defaultPath,
+        filters: isBuild123d
+          ? [{ name: 'Python', extensions: ['py'] }]
+          : [{ name: 'OpenSCAD', extensions: ['scad'] }]
+      })
+
+      if (result.canceled || !result.filePath) {
+        return { canceled: true }
+      }
+
+      fs.writeFileSync(result.filePath, code, 'utf-8')
+      return { canceled: false, filePath: result.filePath }
     }
-    const code = codeParse.data
-    const backend = backendInput !== undefined ? CADBackendSchema.safeParse(backendInput).data : undefined
-    const isBuild123d = backend === 'build123d'
+  )
 
-    const result = await dialog.showSaveDialog({
-      title: isBuild123d ? 'Export Python' : 'Export SCAD',
-      defaultPath: isBuild123d ? 'model.py' : 'model.scad',
-      filters: isBuild123d
-        ? [{ name: 'Python', extensions: ['py'] }]
-        : [{ name: 'OpenSCAD', extensions: ['scad'] }]
-    })
-
-    if (result.canceled || !result.filePath) {
-      return { canceled: true }
-    }
-
-    fs.writeFileSync(result.filePath, code, 'utf-8')
-    return { canceled: false, filePath: result.filePath }
-  })
-
-  ipcMain.handle('export-stl', async (_event, stlBase64: string | null) => {
+  ipcMain.handle('export-stl', async (_event, stlBase64: string | null, currentFilePath?: string) => {
     if (!stlBase64) {
       return { canceled: true }
     }
 
+    const baseName =
+      currentFilePath && currentFilePath.trim()
+        ? path.basename(currentFilePath, path.extname(currentFilePath))
+        : 'model'
+    const defaultPath = path.join(app.getPath('documents'), baseName + '.stl')
+
     const result = await dialog.showSaveDialog({
       title: 'Export STL',
-      defaultPath: 'model.stl',
+      defaultPath,
       filters: [{ name: 'STL', extensions: ['stl'] }]
     })
 

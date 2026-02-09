@@ -49,11 +49,11 @@ describe('getDefaultSettings', () => {
     const settings = getDefaultSettings()
     expect(settings.llm).toEqual({
       provider: 'gemini',
-      model: 'gemini-2.0-flash-exp',
+      model: 'gemini-3-flash',
       apiKey: '',
       enabled: false,
       temperature: 0.7,
-      maxTokens: 2048
+      maxTokens: 128000
     })
   })
 
