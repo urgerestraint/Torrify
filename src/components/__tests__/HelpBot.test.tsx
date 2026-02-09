@@ -89,7 +89,9 @@ describe('HelpBot', () => {
     const input = screen.getByPlaceholderText('Ask a question about Torrify...')
     await user.type(input, 'How do I get started?')
     
-    expect(input).toHaveValue('How do I get started?')
+    await waitFor(() => {
+      expect(input).toHaveValue('How do I get started?')
+    })
   })
 
   it('has Send button', async () => {
@@ -120,6 +122,9 @@ describe('HelpBot', () => {
     const input = screen.getByPlaceholderText('Ask a question about Torrify...')
     await user.type(input, 'Test question')
     
+    await waitFor(() => {
+      expect(input).toHaveValue('Test question')
+    })
     const sendButton = screen.getByRole('button', { name: /send/i })
     expect(sendButton).not.toBeDisabled()
   })
