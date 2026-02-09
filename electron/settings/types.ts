@@ -5,6 +5,9 @@
  */
 import type { CADBackend } from '../cad'
 
+/** Makes all properties of T writable (removes readonly). */
+export type Writable<T> = { -readonly [K in keyof T]: T[K] }
+
 /**
  * Configuration for an LLM provider connection.
  */

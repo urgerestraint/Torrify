@@ -8,7 +8,7 @@
 import * as fs from 'fs'
 import { SETTINGS_DIR, SETTINGS_FILE, LEGACY_SETTINGS_FILE, MAX_RECENT_FILES } from '../constants'
 import { getDefaultSettings } from './defaults'
-import type { Settings } from './types'
+import type { Settings, Writable } from './types'
 import { logger } from '../utils/logger'
 
 /** Current in-memory state of application settings */
@@ -41,25 +41,25 @@ const DEFAULT_MAX_TOKENS = 128000
  * @returns Cleaned and validated Settings object
  */
 function normalizeLoaded(loaded: Settings): Settings {
-  const normalized = { ...loaded }
+  const normalized = { ...loaded } as Writable<Settings>
 
   if (!Array.isArray(normalized.recentFiles)) {
-    (normalized as any).recentFiles = []
+    normalized.recentFiles = []
   }
-  
+
   if (!normalized.cadBackend) {
-    (normalized as any).cadBackend = 'openscad'
+    normalized.cadBackend = 'openscad'
   }
-  
+
   if (!normalized.build123dPythonPath) {
-    (normalized as any).build123dPythonPath = 'python'
+    normalized.build123dPythonPath = 'python'
   }
-  
+
   // Migrate legacy token limits to allow for modern LLM usage
   if (normalized.llm?.maxTokens === LEGACY_MAX_TOKENS) {
-    (normalized.llm as any).maxTokens = DEFAULT_MAX_TOKENS
+    (normalized.llm as Writable<Settings['llm']>).maxTokens = DEFAULT_MAX_TOKENS
   }
-  
+
   return normalized
 }
 
