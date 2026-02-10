@@ -12,6 +12,10 @@
   <img src="docs/assets/application_example.png" alt="Torrify Application Screenshot" width="800" />
 </p>
 
+<p align="center">
+  <img src="docs/assets/TorrifyDemo.gif" alt="Torrify demo: app in use with parameter panel" width="800" />
+</p>
+
 ## 🚀 Quick Start
 
 1. **Download** the latest installer for your OS from [Releases](https://github.com/caseyhartnett/torrify/releases).

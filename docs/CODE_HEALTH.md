@@ -138,7 +138,7 @@ export const TIMEOUTS = {
 export const FILE_SIZE_LIMITS = {
   OUTPUT: 50 * 1024 * 1024,      // 50MB (PNG/STL)
   PROJECT: 100 * 1024 * 1024,    // 100MB (project files)
-  CODE_INPUT: 10 * 1024 * 1024,  // 10MB (code files)
+  CODE_INPUT: 250 * 1024 * 1024, // 250MB (code files)
   CONTEXT: 1024 * 1024           // 1MB (context files)
 } as const
 

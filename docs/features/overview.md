@@ -2,6 +2,14 @@
 
 Torrify connects natural language prompts with parametric 3D modeling tools.
 
+## Demo
+
+The following demo shows the app in use, including the **parameter panel** for tweaking model parameters (e.g. dimensions, options) with sliders and controls while the 3D preview updates live.
+
+<p align="center">
+  <img src="../assets/TorrifyDemo.gif" alt="Torrify demo with parameter panel" width="800" />
+</p>
+
 ## Core Features
 
 ### 🛠️ CAD Backends

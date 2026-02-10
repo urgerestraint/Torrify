@@ -52,6 +52,7 @@ export default defineConfig({
           text: 'Features',
           items: [
             { text: 'Overview', link: '/features/overview' },
+            { text: 'Parameter Panel (PRO)', link: '/features/PARAMETER_PANEL_PLAN' },
             { text: 'CAD Backends', link: '/features/CAD_BACKENDS' },
             { text: 'Streaming AI', link: '/features/STREAMING_AI' },
             { text: 'Image Import', link: '/features/IMAGE_IMPORT' },
