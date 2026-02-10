@@ -2,6 +2,14 @@
 
 > **Status:** Planned for future implementation. This document captures the design and work items.
 
+## Demo
+
+The demo below shows the Parameter Panel in action: adjusting model parameters via the UI while the 3D preview updates.
+
+<p align="center">
+  <img src="../assets/TorrifyDemo.gif" alt="Parameter panel demo" width="800" />
+</p>
+
 ## Overview
 
 Add a PRO-only "Parameter Panel" as a tab-toggle alternative to the code editor, gated behind gateway provider authentication. Non-coders can adjust model parameters via sliders, toggles, dropdowns, and text inputs — with live two-way sync to the underlying code and debounced auto-render.

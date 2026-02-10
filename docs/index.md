@@ -2,6 +2,14 @@
 
 Welcome to the Torrify documentation.
 
+## See it in action
+
+The demo below shows Torrify in use—including the parameter panel for adjusting model parameters without editing code.
+
+<p align="center">
+  <img src="./assets/TorrifyDemo.gif" alt="Torrify demo: product in use with parameter panel" width="800" />
+</p>
+
 ## 📚 Categories
 
 ### [Getting Started](getting-started/index.md)
