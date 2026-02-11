@@ -62,7 +62,10 @@ describe('validatePath', () => {
   })
 
   it('rejects path that is too long', () => {
-    const longPath = path.join('C:', 'x'.repeat(1020), 'model.scad')
+    // Build a path > 1024 chars in a cross-platform way (path.join('C:', ...) length can vary on Linux)
+    const base = path.join(os.tmpdir(), 'model.scad')
+    const pad = 1025 - base.length
+    const longPath = pad > 0 ? path.join(os.tmpdir(), 'x'.repeat(pad), 'model.scad') : base + 'x'.repeat(1025)
     expect(longPath.length).toBeGreaterThan(1024)
     const result = validatePath(longPath)
     expect(result.valid).toBe(false)
