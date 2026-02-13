@@ -45,22 +45,26 @@ describe('HelpBot', () => {
   })
 
   it('displays loading state initially', async () => {
-    let resolveDocs: ((value: { success: boolean; docs: Record<string, string> }) => void) | null = null
+    let resolveDocs:
+      | ((value: { success: boolean; docs: Record<string, string> }) => void)
+      | undefined
     window.electronAPI.loadDocumentation = vi.fn().mockImplementation(
       () =>
-        new Promise((resolve) => {
+        new Promise<{ success: boolean; docs: Record<string, string> }>((resolve) => {
           resolveDocs = resolve
         })
     )
     render(<HelpBot isOpen={true} onClose={mockOnClose} />)
     expect(screen.getByText('Loading documentation...')).toBeInTheDocument()
 
-    resolveDocs?.({
-      success: true,
-      docs: {
-        'README.md': '# Test Documentation',
-      },
-    })
+    if (resolveDocs) {
+      resolveDocs({
+        success: true,
+        docs: {
+          'README.md': '# Test Documentation',
+        },
+      })
+    }
     await waitFor(() => {
       expect(screen.queryByText('Loading documentation...')).not.toBeInTheDocument()
     })
