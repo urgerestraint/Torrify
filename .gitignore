@@ -54,6 +54,8 @@ render_preview.png
 coverage/
 .nyc_output/
 tmp/
+playwright-report/
+test-results/
 
 # Documentation
 docs/.vitepress/dist

@@ -1,10 +1,17 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import HelpBot from '../HelpBot'
 
 describe('HelpBot', () => {
   const mockOnClose = vi.fn()
+  
+  const renderOpenBot = async () => {
+    render(<HelpBot isOpen={true} onClose={mockOnClose} />)
+    expect(screen.getByText('Help Bot')).toBeInTheDocument()
+    await waitFor(() => {
+      expect(screen.queryByText('Loading documentation...')).not.toBeInTheDocument()
+    })
+  }
 
   beforeEach(() => {
     vi.clearAllMocks()
@@ -32,30 +39,43 @@ describe('HelpBot', () => {
     expect(screen.queryByText('Help Bot')).not.toBeInTheDocument()
   })
 
-  it('renders when isOpen is true', () => {
-    render(<HelpBot isOpen={true} onClose={mockOnClose} />)
+  it('renders when isOpen is true', async () => {
+    await renderOpenBot()
     expect(screen.getByText('Help Bot')).toBeInTheDocument()
   })
 
-  it('displays loading state initially', () => {
+  it('displays loading state initially', async () => {
+    let resolveDocs: ((value: { success: boolean; docs: Record<string, string> }) => void) | null = null
+    window.electronAPI.loadDocumentation = vi.fn().mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolveDocs = resolve
+        })
+    )
     render(<HelpBot isOpen={true} onClose={mockOnClose} />)
     expect(screen.getByText('Loading documentation...')).toBeInTheDocument()
+
+    resolveDocs?.({
+      success: true,
+      docs: {
+        'README.md': '# Test Documentation',
+      },
+    })
+    await waitFor(() => {
+      expect(screen.queryByText('Loading documentation...')).not.toBeInTheDocument()
+    })
   })
 
   it('loads documentation on mount', async () => {
-    render(<HelpBot isOpen={true} onClose={mockOnClose} />)
+    await renderOpenBot()
     
-    await waitFor(() => {
-      expect(window.electronAPI.loadDocumentation).toHaveBeenCalled()
-    })
+    expect(window.electronAPI.loadDocumentation).toHaveBeenCalled()
   })
 
   it('displays welcome message after loading', async () => {
-    render(<HelpBot isOpen={true} onClose={mockOnClose} />)
+    await renderOpenBot()
     
-    await waitFor(() => {
-      expect(screen.getByText(/I'm the Torrify Help Bot/i)).toBeInTheDocument()
-    })
+    expect(screen.getByText(/I'm the Torrify Help Bot/i)).toBeInTheDocument()
   })
 
   it('displays error message when documentation fails to load', async () => {
@@ -71,74 +91,50 @@ describe('HelpBot', () => {
   })
 
   it('has input field', async () => {
-    render(<HelpBot isOpen={true} onClose={mockOnClose} />)
+    await renderOpenBot()
     
-    await waitFor(() => {
-      expect(screen.getByPlaceholderText('Ask a question about Torrify...')).toBeInTheDocument()
-    })
+    expect(screen.getByPlaceholderText('Ask a question about Torrify...')).toBeInTheDocument()
   })
 
   it('allows user to type in input', async () => {
-    const user = userEvent.setup()
-    render(<HelpBot isOpen={true} onClose={mockOnClose} />)
-    
-    await waitFor(() => {
-      expect(screen.getByPlaceholderText('Ask a question about Torrify...')).toBeInTheDocument()
-    })
+    await renderOpenBot()
     
     const input = screen.getByPlaceholderText('Ask a question about Torrify...')
-    await user.type(input, 'How do I get started?')
+    fireEvent.change(input, { target: { value: 'How do I get started?' } })
     
-    await waitFor(() => {
-      expect(input).toHaveValue('How do I get started?')
-    })
+    expect(input).toHaveValue('How do I get started?')
   })
 
   it('has Send button', async () => {
-    render(<HelpBot isOpen={true} onClose={mockOnClose} />)
+    await renderOpenBot()
     
-    await waitFor(() => {
-      expect(screen.getByRole('button', { name: /send/i })).toBeInTheDocument()
-    })
+    expect(screen.getByRole('button', { name: /send/i })).toBeInTheDocument()
   })
 
   it('disables Send button when input is empty', async () => {
-    render(<HelpBot isOpen={true} onClose={mockOnClose} />)
+    await renderOpenBot()
     
-    await waitFor(() => {
-      const sendButton = screen.getByRole('button', { name: /send/i })
-      expect(sendButton).toBeDisabled()
-    })
+    const sendButton = screen.getByRole('button', { name: /send/i })
+    expect(sendButton).toBeDisabled()
   })
 
   it('enables Send button when input has text', async () => {
-    const user = userEvent.setup()
-    render(<HelpBot isOpen={true} onClose={mockOnClose} />)
-    
-    await waitFor(() => {
-      expect(screen.getByPlaceholderText('Ask a question about Torrify...')).toBeInTheDocument()
-    })
+    await renderOpenBot()
     
     const input = screen.getByPlaceholderText('Ask a question about Torrify...')
-    await user.type(input, 'Test question')
+    fireEvent.change(input, { target: { value: 'Test question' } })
     
-    await waitFor(() => {
-      expect(input).toHaveValue('Test question')
-    })
+    expect(input).toHaveValue('Test question')
     const sendButton = screen.getByRole('button', { name: /send/i })
     expect(sendButton).not.toBeDisabled()
   })
 
   it('sends message when Enter is pressed', async () => {
-    const user = userEvent.setup()
-    render(<HelpBot isOpen={true} onClose={mockOnClose} />)
-    
-    await waitFor(() => {
-      expect(screen.getByPlaceholderText('Ask a question about Torrify...')).toBeInTheDocument()
-    })
+    await renderOpenBot()
     
     const input = screen.getByPlaceholderText('Ask a question about Torrify...')
-    await user.type(input, 'Test question{Enter}')
+    fireEvent.change(input, { target: { value: 'Test question' } })
+    fireEvent.keyDown(input, { key: 'Enter', code: 'Enter' })
     
     // Input should be cleared after sending
     await waitFor(() => {
@@ -147,26 +143,18 @@ describe('HelpBot', () => {
   })
 
   it('has close button', async () => {
-    render(<HelpBot isOpen={true} onClose={mockOnClose} />)
+    await renderOpenBot()
     
-    await waitFor(() => {
-      const closeButton = screen.getByTitle('Close')
-      expect(closeButton).toBeInTheDocument()
-    })
+    const closeButton = screen.getByTitle('Close')
+    expect(closeButton).toBeInTheDocument()
   })
 
   it('calls onClose when close button is clicked', async () => {
-    const user = userEvent.setup()
-    render(<HelpBot isOpen={true} onClose={mockOnClose} />)
-    
-    await waitFor(() => {
-      expect(screen.getByTitle('Close')).toBeInTheDocument()
-    })
+    await renderOpenBot()
     
     const closeButton = screen.getByTitle('Close')
-    await user.click(closeButton)
+    fireEvent.click(closeButton)
     
     expect(mockOnClose).toHaveBeenCalled()
   })
 })
-

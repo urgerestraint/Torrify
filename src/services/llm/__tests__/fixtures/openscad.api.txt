@@ -1,0 +1,3 @@
+cube(size=[x,y,z], center=false)
+cylinder(h, r, center=false)
+translate(v) { ... }

@@ -1,0 +1,11 @@
+
+
+---
+
+## API Reference (SOURCE OF TRUTH)
+
+**CRITICAL: The following is the COMPLETE API reference for OpenSCAD. You MUST ONLY use functions and classes listed here. If a function is not in this reference, it does not exist. Do NOT invent or hallucinate API calls.**
+
+cube(size=[x,y,z], center=false)
+cylinder(h, r, center=false)
+translate(v) { ... }
