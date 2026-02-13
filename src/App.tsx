@@ -488,9 +488,9 @@ function App() {
       setEditorKey((prev) => prev + 1)
       if (Array.isArray(project.chat)) {
         setMessages(
-          project.chat.map((m: Message & { timestamp: string }) => ({
+          project.chat.map((m) => ({
             ...m,
-            timestamp: new Date(m.timestamp)
+            timestamp: typeof m.timestamp === 'string' ? new Date(m.timestamp) : m.timestamp
           }))
         )
       } else {

@@ -1,35 +1,30 @@
 # Start Here
 
-Torrify is an AI-assisted IDE for 3D CAD modeling that supports OpenSCAD and build123d.
+This page is the docs entry point for first-time setup.
 
-## 🚀 Quick Setup
+If you already used the repository `README.md`, you can skip this page and continue with:
 
-### 1. Prerequisites
-*   **OpenSCAD** (Required) - The engine that creates your 3D models.
-*   **Node.js** (Only if developing)
-*   **Python 3.x** + `build123d` (Optional) - Only needed if you want to write Python code instead of SCAD.
+- [Installation](./installation.md)
+- [Quickstart](./QUICKSTART.md)
+- [Troubleshooting](./TROUBLESHOOTING.md)
 
-### 2. Install & Run
-```powershell
-# Clone and install
-git clone https://github.com/caseyhartnett/torrify.git
-cd torrify
-npm install
+## Fast Path (Docs-Only)
 
-# Start development server
-npm run electron:dev
+1. Install Torrify from [GitHub Releases](https://github.com/caseyhartnett/torrify/releases)
+2. Install [OpenSCAD](https://openscad.org/downloads.html)
+3. Open Torrify and set `OpenSCAD Path` in `Settings`
+4. Render this to verify setup:
+
+```scad
+cube([20, 20, 20]);
 ```
 
-### 3. Usage
-*   **Editor**: Write SCAD code (e.g., `cube([10, 10, 10]);`)
-*   **Render**: Press `Ctrl+S` to view the 3D model.
-*   **AI Chat**: Type requests in the chat panel to generate code.
+If the 3D preview updates, your setup is working.
 
-## 📚 Documentation Map
+## Next Steps
 
-| Resource | Description |
-|----------|-------------|
-| **[Installation](./installation.md)** | Detailed installation steps for all platforms. |
-| **[Features](../features/overview.md)** | Comprehensive guide to AI, CAD backends, and settings. |
-| **[Developer Guide](../developer/getting-started.md)** | Setup for contributors and developers. |
-| **[Troubleshooting](./TROUBLESHOOTING.md)** | Common issues and solutions. |
+- New user walkthrough: [Quickstart](./QUICKSTART.md)
+- Full setup options: [Installation](./installation.md)
+- Common errors and fixes: [Troubleshooting](./TROUBLESHOOTING.md)
+- Feature overview: [Features](../features/overview.md)
+- Developer setup: [Developer Guide](../developer/README.md)

@@ -16,6 +16,7 @@ Click the **Gear Icon (⚙️)** in the top-right corner of the application wind
 ### 2. AI Configuration
 *   **Enable AI**: Master toggle for AI features.
 *   **Access Mode**: Choose between **PRO** (License Key) or **BYOK** (Bring Your Own Key).
+*   **PRO Unlocks**: Includes access to the **Parameter Slider** tab for code-free parameter editing.
 *   **Provider**: Select Gemini, OpenRouter, or Ollama.
 *   **Model**: Specific model string (e.g., `gemini-2.0-flash`).
 *   **Temperature**: Control randomness (0.0 - 1.0).

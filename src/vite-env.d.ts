@@ -1,5 +1,9 @@
 /// <reference types="vite/client" />
 
+/**
+ * Renderer-side ambient typings for the Electron preload bridge.
+ * Keep this file aligned with `electron/preload.ts` until bridge types are shared.
+ */
 type CADBackend = 'openscad' | 'build123d'
 
 interface LLMConfig {
@@ -19,12 +23,29 @@ interface RecentFile {
   lastOpened: string
 }
 
+interface ProjectMessage {
+  id: number
+  text: string
+  sender: 'user' | 'bot'
+  timestamp: string
+  error?: boolean
+  imageDataUrls?: string[]
+}
+
 /** Loaded project shape from openRecentFile / loadProject */
 interface LoadedProject {
   version?: number
   code?: string
-  chat?: Array<{ id: number; text: string; sender: 'user' | 'bot'; timestamp: string; error?: boolean; imageDataUrls?: string[] }>
+  chat?: ProjectMessage[]
   stlBase64?: string | null
+  cadBackend?: CADBackend
+}
+
+interface ProjectFile {
+  version: number
+  code: string
+  stlBase64: string | null
+  chat: ProjectMessage[]
   cadBackend?: CADBackend
 }
 
@@ -107,8 +128,8 @@ interface ElectronAPI {
     timestamp: number
     error?: string
   }>
-  saveProject: (project: any, currentFilePath?: string) => Promise<{ canceled: boolean; filePath?: string; error?: string }>
-  loadProject: () => Promise<{ canceled: boolean; project?: any; filePath?: string; error?: string }>
+  saveProject: (project: ProjectFile, currentFilePath?: string) => Promise<{ canceled: boolean; filePath?: string; error?: string }>
+  loadProject: () => Promise<{ canceled: boolean; project?: LoadedProject; filePath?: string; error?: string }>
   exportScad: (code: string, backend?: CADBackend, currentFilePath?: string) => Promise<{ canceled: boolean; filePath?: string }>
   exportStl: (stlBase64: string | null, currentFilePath?: string) => Promise<{ canceled: boolean; filePath?: string }>
   getTempDir: () => Promise<string>
@@ -145,10 +166,10 @@ interface ElectronAPI {
   resetContextToFactory: (backend?: CADBackend) => Promise<ContextResetResult>
   
   // Ollama models
-  getOllamaModels: (endpoint?: string) => Promise<{ success: boolean; models: Array<{ name: string; size: number; modified: string }>; error?: string }>
+  getOllamaModels: (endpoint?: string) => Promise<{ success: boolean; models?: Array<{ name: string; size: number; modified: string }>; error?: string }>
   
   onMenuEvent: (channel: string, callback: () => void) => void
-  removeMenuListener: (channel: string, callback: () => void) => void
+  removeMenuListener: (channel: string) => void
 }
 
 declare global {
