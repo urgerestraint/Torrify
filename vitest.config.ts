@@ -13,6 +13,8 @@ export default defineConfig({
       'node_modules',
       'dist',
       'dist-electron',
+      'e2e',
+      '**/e2e/**',
       '**/dist-electron/**',
     ],
     coverage: {
@@ -23,6 +25,8 @@ export default defineConfig({
       exclude: [
         'node_modules/',
         'src/test/',
+        '**/__tests__/**',
+        '**/*.{test,spec}.*',
         '**/*.d.ts',
         '**/*.config.*',
         '**/dist/**',

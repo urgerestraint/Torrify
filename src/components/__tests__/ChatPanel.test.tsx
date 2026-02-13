@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { act, render, screen, waitFor } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import ChatPanel, { type Message } from '../ChatPanel'
 import { useState } from 'react'
@@ -84,11 +84,10 @@ describe('ChatPanel', () => {
   })
 
   it('allows user to type a message', async () => {
-    const user = userEvent.setup()
     await renderChatPanel()
     
     const input = screen.getByPlaceholderText('Type a message...')
-    await user.type(input, 'Hello bot')
+    fireEvent.change(input, { target: { value: 'Hello bot' } })
     
     expect(input).toHaveValue('Hello bot')
   })
@@ -100,7 +99,7 @@ describe('ChatPanel', () => {
     const input = screen.getByPlaceholderText('Type a message...')
     const sendButton = screen.getByRole('button', { name: /send/i })
     
-    await user.type(input, 'Test message')
+    fireEvent.change(input, { target: { value: 'Test message' } })
     await act(async () => {
       await user.click(sendButton)
       await flushPromises()
@@ -114,12 +113,12 @@ describe('ChatPanel', () => {
   })
 
   it('sends message when Enter is pressed', async () => {
-    const user = userEvent.setup()
     await renderChatPanel()
     
     const input = screen.getByPlaceholderText('Type a message...')
     
-    await user.type(input, 'Test with Enter{Enter}')
+    fireEvent.change(input, { target: { value: 'Test with Enter' } })
+    fireEvent.keyDown(input, { key: 'Enter', code: 'Enter' })
     
     // User message should appear
     expect(screen.getByText('Test with Enter')).toBeInTheDocument()
@@ -132,7 +131,7 @@ describe('ChatPanel', () => {
     const input = screen.getByPlaceholderText('Type a message...')
     const sendButton = screen.getByRole('button', { name: /send/i })
     
-    await user.type(input, 'Hello')
+    fireEvent.change(input, { target: { value: 'Hello' } })
     await act(async () => {
       await user.click(sendButton)
       await flushPromises()
@@ -176,7 +175,7 @@ describe('ChatPanel', () => {
 
     const input = screen.getByPlaceholderText('Type a message...')
     const sendButton = screen.getByRole('button', { name: /send/i })
-    await user.type(input, 'Stream this')
+    fireEvent.change(input, { target: { value: 'Stream this' } })
     await user.click(sendButton)
 
     await waitFor(() => {
@@ -200,7 +199,7 @@ describe('ChatPanel', () => {
 
     const input = screen.getByPlaceholderText('Type a message...')
     const sendButton = screen.getByRole('button', { name: /send/i })
-    await user.type(input, 'Here is an image')
+    fireEvent.change(input, { target: { value: 'Here is an image' } })
     await user.click(sendButton)
 
     await waitFor(() => {
@@ -219,7 +218,7 @@ describe('ChatPanel', () => {
     const input = screen.getByPlaceholderText('Type a message...')
     const sendButton = screen.getByRole('button', { name: /send/i })
 
-    await user.type(input, 'Hello')
+    fireEvent.change(input, { target: { value: 'Hello' } })
     await act(async () => {
       await user.click(sendButton)
       await flushPromises()

@@ -1,6 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { act, fireEvent, render, screen } from '@testing-library/react'
 import DemoDialog from '../DemoDialog'
 
 describe('DemoDialog', () => {
@@ -9,9 +8,14 @@ describe('DemoDialog', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
+    vi.useFakeTimers()
     // Mock electronAPI
     window.electronAPI.getSettings = vi.fn().mockResolvedValue({ hasSeenDemo: false })
     window.electronAPI.saveSettings = vi.fn().mockResolvedValue({ success: true })
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
   })
 
   it('does not render when isOpen is false', () => {
@@ -45,41 +49,40 @@ describe('DemoDialog', () => {
   })
 
   it('calls onClose when Skip Demo is clicked', async () => {
-    const user = userEvent.setup()
     render(<DemoDialog isOpen={true} onClose={mockOnClose} onRunDemo={mockOnRunDemo} />)
     
     const skipButton = screen.getByRole('button', { name: /skip demo/i })
-    await user.click(skipButton)
+    fireEvent.click(skipButton)
     
-    // Wait for timeout in handleSkip
-    await new Promise(resolve => setTimeout(resolve, 250))
+    await act(async () => {
+      vi.advanceTimersByTime(250)
+    })
     expect(mockOnClose).toHaveBeenCalled()
   })
 
   it('calls onRunDemo when Start Guided Tour is clicked', async () => {
-    const user = userEvent.setup()
     render(<DemoDialog isOpen={true} onClose={mockOnClose} onRunDemo={mockOnRunDemo} />)
     
     const showButton = screen.getByRole('button', { name: /start guided tour/i })
-    await user.click(showButton)
+    fireEvent.click(showButton)
     
-    // Wait for timeout in handleRunDemo
-    await new Promise(resolve => setTimeout(resolve, 250))
+    await act(async () => {
+      vi.advanceTimersByTime(250)
+    })
     expect(mockOnClose).toHaveBeenCalled()
     expect(mockOnRunDemo).toHaveBeenCalled()
   })
 
   it('saves settings when Skip Demo is clicked', async () => {
-    const user = userEvent.setup()
     render(<DemoDialog isOpen={true} onClose={mockOnClose} onRunDemo={mockOnRunDemo} />)
     
     const skipButton = screen.getByRole('button', { name: /skip demo/i })
-    await user.click(skipButton)
+    fireEvent.click(skipButton)
     
-    // Wait for async operations
-    await new Promise(resolve => setTimeout(resolve, 250))
+    await act(async () => {
+      vi.advanceTimersByTime(250)
+    })
     expect(window.electronAPI.getSettings).toHaveBeenCalled()
     expect(window.electronAPI.saveSettings).toHaveBeenCalled()
   })
 })
-
