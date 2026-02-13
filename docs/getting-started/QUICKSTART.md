@@ -1,59 +1,48 @@
-# Quick Start Guide
+# Quickstart
 
-This guide covers installation and basic usage of Torrify.
+This guide gets you from install to first model quickly.
 
-## Installation
+## 1. Install
 
-### Option A: Installers (Recommended)
-Download the latest installer for your operating system from [GitHub Releases](https://github.com/caseyhartnett/torrify/releases).
+- Install Torrify from [GitHub Releases](https://github.com/caseyhartnett/torrify/releases)
+- Install [OpenSCAD](https://openscad.org/downloads.html)
 
-**Supported Platforms:**
-*   **Windows:** `.exe` installer
-*   **macOS:** `.dmg` image
-*   **Linux:** `.AppImage`
+## 2. Configure
 
-### Option B: Build from Source
-*For developers who want to modify the code.*
-👉 **[See the Developer Guide](../developer/README.md)**
+Open `Settings` in Torrify and set:
 
+- `OpenSCAD Path`
+- AI provider (`Gemini`, `OpenRouter`, or `Ollama`)
+- API key if required
 
-## Configuration
+## 3. Render Your First Model
 
-On first launch, configure your settings via the **Settings (⚙️)** icon:
+Paste this in the editor:
 
-1.  **CAD Backend**: 
-    *   **OpenSCAD**: Verify path (default: `C:\Program Files\OpenSCAD\openscad.exe` on Windows).
-    *   **build123d**: Set path to Python executable with `build123d` installed.
-2.  **AI Provider** (Optional):
-    *   Choose Gemini, OpenRouter, or Ollama.
-    *   Enter API Key.
+```scad
+cube([20, 20, 20]);
+```
 
-## Basic Usage
+Save or render (`Ctrl+S`) to update the 3D preview.
 
-### creating a Model
-1.  **Code**: Type OpenSCAD code in the editor.
-    ```openscad
-    cube([10, 10, 10]);
-    ```
-2.  **Render**: Press `Ctrl+S` or click **Render**. The 3D view will update.
+## 4. Try AI-Assisted Editing
 
-### Using AI Assistance
-1.  **Chat**: Describe what you want in the chat panel (e.g., "Create a cylinder with radius 5").
-2.  **Refine**: Ask for modifications (e.g., "Make it taller").
-3.  **Images**: Attach reference images using the paperclip icon.
+Use chat prompts such as:
 
-## Common Commands
+- `Add a centered cylinder cutout through the cube.`
+- `Make this parametric with width, depth, and height variables.`
 
-| Command | Description |
-|---------|-------------|
-| `npm run electron:dev` | Start app in development mode |
-| `npm test` | Run test suite |
-| `npm run build` | Build for production |
-| `npm run package` | Create installer for current OS |
+## 5. Optional: Use build123d
 
-## Troubleshooting
+If you prefer Python CAD:
 
-See [TROUBLESHOOTING.md](./TROUBLESHOOTING.md) for detailed solutions to common issues like:
-*   "OpenSCAD not found"
-*   Port conflicts
-*   Build errors
+```bash
+pip install build123d
+```
+
+Then set `Python Path` in `Settings` and switch backend.
+
+## Next
+
+- See [Feature Overview](../features/overview.md)
+- If something fails, check [Troubleshooting](./TROUBLESHOOTING.md)

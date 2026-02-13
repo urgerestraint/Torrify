@@ -1,50 +1,152 @@
 # Torrify
 
 <p align="center">
-  <img src="docs/assets/logo.png" alt="Torrify Logo" width="200" />
+  <img src="docs/assets/logo.png" alt="Torrify logo" width="160" />
 </p>
 
-[![Build](https://github.com/caseyhartnett/torrify/actions/workflows/build-installers.yml/badge.svg)](https://github.com/caseyhartnett/torrify/actions/workflows/build-installers.yml) [![codecov](https://codecov.io/gh/caseyhartnett/torrify/graph/badge.svg)](https://codecov.io/gh/caseyhartnett/torrify)
-
-**An AI-assisted IDE for 3D CAD modeling** that bridges the gap between natural language and parametric design. Built with Electron, React, and TypeScript, Torrify supports OpenSCAD and build123d, allowing you to generate, edit, and visualize 3D models using simple chat commands or code.
+<p align="center"><strong>AI-assisted desktop app for parametric 3D CAD</strong></p>
 
 <p align="center">
-  <img src="docs/assets/application_example.png" alt="Torrify Application Screenshot" width="800" />
+  Build 3D models with OpenSCAD or build123d, with an editor, AI assistant, and 3D preview in one app.
 </p>
 
 <p align="center">
-  <img src="docs/assets/TorrifyDemo.gif" alt="Torrify demo: app in use with parameter panel" width="800" />
+  <a href="https://github.com/caseyhartnett/torrify/actions/workflows/build-installers.yml"><img src="https://github.com/caseyhartnett/torrify/actions/workflows/build-installers.yml/badge.svg" alt="Build" /></a>
+  <a href="https://codecov.io/gh/caseyhartnett/torrify"><img src="https://codecov.io/gh/caseyhartnett/torrify/graph/badge.svg" alt="Coverage" /></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-GPLv3-blue.svg" alt="License: GPLv3" /></a>
 </p>
 
-## 🚀 Quick Start
-
-1. **Download** the latest installer for your OS from [Releases](https://github.com/caseyhartnett/torrify/releases).
-2. **Install** OpenSCAD (for OpenSCAD backend) or Python + build123d (for build123d backend).
-3. **Run** Torrify and open Settings (⚙️) to configure your AI Provider (Gemini, OpenRouter, or Ollama).
-
-For detailed instructions, see the **[Installation Guide](docs/getting-started/installation.md)**.
-
-## 📚 Documentation
-
-- 📖 **[User Guide & Features](docs/features/overview.md)** - Learn about AI chat, image-to-3D, and workflows.
-- 🛠️ **[Developer Guide](docs/developer/README.md)** - Setup your dev environment, build, and test.
-- 🏗️ **[Architecture](docs/architecture/ARCHITECTURE.md)** - Deep dive into the codebase structure.
-
-## 🌍 Community & Showcase
-
-Check out what's possible with Torrify!
-
-<p align="left">
-  <a href="https://makerworld.com/en/@Bigreddazer">
-    <img src="docs/assets/profile-maker.jpg" alt="MakerWorld Profile" width="100" style="border-radius: 50%;" />
-  </a>
-  <br/>
-  <strong><a href="https://makerworld.com/en/@Bigreddazer">Bigreddazer on MakerWorld</a></strong> - All models designed using this application.
+<p align="center">
+  <img src="docs/assets/application_example.png" alt="Torrify screenshot" width="900" />
 </p>
 
-**Support:** [hello@torrify.org](mailto:hello@torrify.org) — for issues, suggestions, or feedback.
-**Website:** [torrify.org](https://torrify.org)
+## What Torrify Is
 
-## 📄 License
+Torrify helps you design parametric 3D models from code, with AI assistance when you want it.
 
-Licensed under the [GNU General Public License v3.0](LICENSE).
+- Works with `OpenSCAD` (recommended default) and `build123d` (Python backend)
+- Includes code editor, chat assistant, and 3D preview
+- Lets you save and reload project state with `.torrify` files
+- Runs as a desktop app (Windows, macOS, Linux)
+
+## Who This Is For
+
+- Makers and hobbyists learning CAD scripting
+- Developers who want faster model iteration
+- Teams prototyping scripted geometry workflows
+
+No advanced setup is required for basic usage.
+
+## What You Need Before You Start
+
+- A desktop computer (Windows, macOS, or Linux)
+- Torrify app installer from GitHub Releases
+- OpenSCAD installed on your system
+- Optional: an AI provider account/key (Gemini or OpenRouter), or local Ollama
+
+## Quick Start (Non-Technical)
+
+### 1. Download and install Torrify
+
+Get the latest release from [GitHub Releases](https://github.com/caseyhartnett/torrify/releases).
+
+- Windows: install the `.exe`
+- macOS: open the `.dmg` and drag to Applications
+- Linux: mark the `.AppImage` as executable, then run it
+
+### 2. Install OpenSCAD (required)
+
+Download OpenSCAD from <https://openscad.org/downloads.html>.
+
+### 3. Open Torrify and configure Settings
+
+In `Settings`:
+
+- Set `OpenSCAD Path` to your OpenSCAD executable
+- (Optional) Set an AI provider (`Gemini`, `OpenRouter`, or `Ollama`)
+- Add API key if your chosen provider requires one
+- Your settings are saved locally on your machine
+
+### 4. Test with your first model
+
+Paste this into the editor and render:
+
+```scad
+cube([20, 20, 20]);
+```
+
+If the 3D preview updates, your setup is working.
+
+## Optional Setup
+
+### Use build123d (Python backend)
+
+If you prefer Python-based CAD:
+
+```bash
+pip install build123d
+```
+
+Then set `Python Path` in `Settings` and switch backend.
+
+### Use AI fully local with Ollama
+
+If you do not want cloud AI providers, use Ollama locally. See:
+
+- [`docs/features/LLM_INTEGRATION.md`](docs/features/LLM_INTEGRATION.md)
+
+## If You Get Stuck
+
+- Installation help: [`docs/getting-started/installation.md`](docs/getting-started/installation.md)
+- Step-by-step first run: [`docs/getting-started/QUICKSTART.md`](docs/getting-started/QUICKSTART.md)
+- Common errors: [`docs/getting-started/TROUBLESHOOTING.md`](docs/getting-started/TROUBLESHOOTING.md)
+
+## Build From Source (Developers)
+
+```bash
+git clone https://github.com/caseyhartnett/torrify.git
+cd torrify
+npm install
+npm run electron:dev
+```
+
+Useful commands:
+
+- `npm run lint` run ESLint
+- `npm test` run test suite
+- `npm run test:coverage` generate coverage report
+- `npm run package` build installer for current OS
+- `npm run docs:dev` run docs locally
+
+## Documentation Map
+
+### Start Here
+
+- Docs home: [`docs/index.md`](docs/index.md)
+- Getting started overview: [`docs/getting-started/index.md`](docs/getting-started/index.md)
+
+### Product Docs
+
+- Features overview: [`docs/features/overview.md`](docs/features/overview.md)
+- CAD backends: [`docs/features/CAD_BACKENDS.md`](docs/features/CAD_BACKENDS.md)
+- AI integration: [`docs/features/LLM_INTEGRATION.md`](docs/features/LLM_INTEGRATION.md)
+- Settings: [`docs/features/SETTINGS.md`](docs/features/SETTINGS.md)
+- FAQ: [`docs/reference/faq.md`](docs/reference/faq.md)
+
+### Technical Docs
+
+- Developer docs: [`docs/developer/index.md`](docs/developer/index.md)
+- Architecture: [`docs/architecture/index.md`](docs/architecture/index.md)
+- Security docs: [`docs/security/index.md`](docs/security/index.md)
+
+## Community and Support
+
+- Contributing guide: [`CONTRIBUTING.md`](CONTRIBUTING.md)
+- Code of conduct: [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md)
+- Security policy: [`SECURITY.md`](SECURITY.md)
+- Issues: <https://github.com/caseyhartnett/torrify/issues>
+- Contact: <hello@torrify.org>
+
+## License
+
+Torrify is licensed under the [GNU General Public License v3.0](LICENSE).

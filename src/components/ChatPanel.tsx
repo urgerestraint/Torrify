@@ -303,6 +303,8 @@ ${pendingDiagnosis.code}
       
       processDiagnosis()
     }
+    // Intentionally omit sendToLlm from deps: we only want one diagnosis request per
+    // pendingDiagnosis event, and sendToLlm identity changes with chat state updates.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pendingDiagnosis, isLoading, cadBackend, onDiagnosisSent, setMessages])
 

@@ -26,6 +26,7 @@ The following demo shows the app in use, including the **parameter panel** for t
 
 ### 📝 Editor & Workflow
 *   **Monaco Editor**: Professional-grade editor with syntax highlighting.
+*   **Parameter Slider Tab (PRO)**: Switch from **Code** to **Parameters** for a code-free, slider-based editing experience.
 *   **File Operations**: Open, Save, and New File support for `.scad` and `.py` files.
 *   **Project Files**: Save your entire workspace (code + chat + settings) as a `.torrify` file.
 *   **Native Menu Bar**: Standard desktop application menus.

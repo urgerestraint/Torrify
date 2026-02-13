@@ -1,5 +1,5 @@
 # Reference Documentation
 
-*   **[Quick Reference](QUICK_REFERENCE.md)**: Shortcuts and paths.
-*   **[FAQ](FAQ.md)**: Frequently asked questions.
-*   **[Project Format](PROJECT_FORMAT.md)**: `.torrify` file specification.
+- **[FAQ](faq.md)**: Frequently asked questions.
+- **[Quick Reference](QUICK_REFERENCE.md)**: Shortcuts and key paths.
+- **[Project Format](PROJECT_FORMAT.md)**: `.torrify` file specification.

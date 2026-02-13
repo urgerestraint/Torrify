@@ -89,7 +89,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   /** Validates if the selected CAD backend is properly configured */
   validateCadBackend: (backend: CADBackend) => ipcRenderer.invoke('validate-cad-backend', backend),
   
-  /** Opens a native directory picker to select the OpenSCAD executable */
+  /** Opens a native file picker to select the OpenSCAD executable */
   selectOpenscadPath: () => ipcRenderer.invoke('select-openscad-path'),
   
   /** Checks if the welcome/onboarding screen should be displayed */
@@ -179,7 +179,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     }
   },
   
-  /** Removes a menu event listener */
+  /** Removes all menu listeners for a given channel */
   removeMenuListener: (channel: string) => {
     ipcRenderer.removeAllListeners(channel)
   }

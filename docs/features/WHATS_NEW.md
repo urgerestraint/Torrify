@@ -1,5 +1,17 @@
 # What's New in Torrify
 
+## Latest Update: Parameter Slider Tab (PRO, Code-Free Workflow)
+
+**Date:** February 13, 2026
+
+### Highlights
+- Added a `Parameters` tab alongside the `Code` tab in the editor area.
+- Enables code-free interaction with model parameters via sliders and controls.
+- Designed for users with an aversion to code who still want parametric iteration.
+- Available in the **PRO** experience.
+
+---
+
 ## Latest Update: Streaming AI + Knowledge Base + Image Import
 
 **Date:** January 25, 2026
@@ -611,4 +623,3 @@ See `docs/features/CAD_BACKENDS.md` for complete documentation.
 ---
 
 *Milestone - January 24, 2026*
-

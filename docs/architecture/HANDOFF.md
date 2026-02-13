@@ -278,7 +278,7 @@ Torrify provides:
 ## Documentation Pointers
 
 - `docs/getting-started/START_HERE.md` - Entry point
-- `docs/developer/DEV_README.md` - Dev workflows
+- `docs/developer/README.md` - Dev workflows
 - `docs/features/` - Feature deep dives
 - `docs/security/SECURITY_AUDIT.md` - Current audit status
 - `docs/history/` - Detailed session logs
@@ -311,7 +311,7 @@ See `docs/security/SECURITY_AUDIT.md` for full details.
 
 ### Running and Testing
 
-- Dev and test workflows are documented in `docs/developer/DEV_README.md`
+- Dev and test workflows are documented in `docs/developer/README.md`
 - Use `npm test` for current counts and suites
 
 ### Release Considerations

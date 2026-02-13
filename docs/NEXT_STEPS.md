@@ -46,7 +46,7 @@ We want to avoid building a "walled garden". Future features should solve real u
 
 ## 📚 Documentation Links
 
-- [Developer Guide](developer/DEV_README.md)
+- [Developer Guide](developer/README.md)
 - [Architecture](architecture/index.md)
 - [Features](features/)
 

@@ -8,3 +8,4 @@
 *   **[Image Import](IMAGE_IMPORT.md)**: Using reference images.
 *   **[Knowledge Base](KNOWLEDGE_BASE.md)**: API context system.
 *   **[Menu Bar](MENU_BAR.md)**: Native menu reference.
+*   **[Parameter Slider Tab (PRO)](PARAMETER_PANEL_PLAN.md)**: Code-free parameter controls for non-coders.

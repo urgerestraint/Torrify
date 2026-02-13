@@ -1,17 +1,17 @@
-# Security Documentation
+# Security
 
-Security audit, best practices, and threat model.
+Torrify uses local-first settings and a BYOK model for cloud AI providers.
 
-## Key Topics
+## Report a Vulnerability
 
-- Security posture
-- Threat model
-- Best practices
-- Resolved issues
-- Recommendations
+For sensitive disclosures, email: <hello@torrify.org>
 
-## Status
+Do not open a public issue for active security vulnerabilities.
 
-✅ All critical and high-priority security issues resolved.
+## Security Notes
 
-Security audit details are available in internal documentation.
+- API keys are stored locally in user settings.
+- CAD rendering is executed on the local machine.
+- Ollama can be used for fully local AI workflows.
+
+For repository policy details, see [`SECURITY.md`](../../SECURITY.md).

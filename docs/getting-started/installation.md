@@ -2,41 +2,40 @@
 
 ## Prerequisites
 
-### For Standard Use
-*   **OpenSCAD** ([Download](https://openscad.org/downloads.html)) - Required for default CAD backend.
-*   **Python 3.10+** & `build123d` - Optional, only for Python backend.
-    ```bash
-    pip install build123d
-    ```
+### Required
 
-### For Development
-See the [Developer Guide](../developer/getting-started.md).
+- [OpenSCAD](https://openscad.org/downloads.html)
 
-## Installation
+### Optional
 
-### Option 1: Installers (Recommended)
-Download the latest installer for your OS from [GitHub Releases](https://github.com/caseyhartnett/torrify/releases).
+- Python `3.10+` and `build123d` if you plan to use the Python backend:
 
-*   **Windows**: Run the `.exe` installer.
-*   **macOS**: Open the `.dmg` and drag to Applications.
-*   **Linux**: Make the `.AppImage` executable (`chmod +x`) and run.
+```bash
+pip install build123d
+```
 
-### Option 2: Build from Source
-*For advanced users and contributors.*
-👉 **[See the Developer Guide](../developer/README.md)**
+## Install Torrify
 
+Download the latest installer from [GitHub Releases](https://github.com/caseyhartnett/torrify/releases).
 
-## Configuration
+- Windows: run the `.exe`
+- macOS: open the `.dmg` and drag to Applications
+- Linux: mark the `.AppImage` executable and run
 
-### 1. CAD Backend
-On first launch, check your CAD paths in **Settings > General**:
-*   **OpenSCAD Path**: e.g., `C:\Program Files\OpenSCAD\openscad.exe`
-*   **Python Path**: e.g., `C:\Python310\python.exe` (if using build123d)
+## First-Run Configuration
 
-### 2. AI Provider (BYOK)
-Torrify uses a "Bring Your Own Key" model. Configure this in **Settings > AI Configuration**:
-1.  Select Provider: **Google Gemini**, **OpenRouter**, or **Ollama**.
-2.  Enter API Key (not required for Ollama).
-3.  Enable **"Enable AI Assistant"**.
+In `Settings` configure:
 
-> **Note**: API keys are stored locally in `~/.torrify/settings.json` and are never sent to our servers.
+1. CAD backend paths
+- OpenSCAD executable path
+- Python executable path (only for build123d)
+
+2. AI provider
+- Gemini, OpenRouter, or Ollama
+- API key for cloud providers
+
+API keys are stored locally in `~/.torrify/settings.json`.
+
+## Build From Source (Contributors)
+
+Use the [Developer Guide](../developer/README.md) for local development setup.
