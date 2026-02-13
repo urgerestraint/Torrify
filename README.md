@@ -17,7 +17,7 @@
 </p>
 
 <p align="center">
-  <img src="docs/assets/application_example.png" alt="Torrify screenshot" width="900" />
+  <img src="docs/assets/TorrifyDemo.gif" alt="Torrify demo" width="900" />
 </p>
 
 ## What Torrify Is

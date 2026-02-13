@@ -23,21 +23,22 @@ export function useOllamaModels(
       setOllamaModelsError(null)
       try {
         const result = await window.electronAPI.getOllamaModels(endpoint)
-        if (result.success && result.models.length > 0) {
-          setOllamaModels(result.models)
+        const models = result.models ?? []
+        if (result.success && models.length > 0) {
+          setOllamaModels(models)
           setSettings((prev) => {
             if (
               !prev ||
               prev.llm.provider !== 'ollama' ||
-              (prev.llm.model && result.models.some((m) => m.name === prev.llm.model))
+              (prev.llm.model && models.some((m) => m.name === prev.llm.model))
             ) {
               return prev
             }
-            const preferredModel = result.models.find((m) => m.name === 'gpt-oss:20b')
-            const modelToUse = preferredModel ? preferredModel.name : result.models[0].name
+            const preferredModel = models.find((m) => m.name === 'gpt-oss:20b')
+            const modelToUse = preferredModel ? preferredModel.name : models[0].name
             return { ...prev, llm: { ...prev.llm, model: modelToUse } }
           })
-          return result.models
+          return models
         } else {
           setOllamaModelsError(
             result.error || 'No models found. Make sure Ollama is running and has models installed.'
