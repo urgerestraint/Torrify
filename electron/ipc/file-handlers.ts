@@ -7,10 +7,17 @@ import { addToRecentFiles } from '../settings'
 import { MAX_SCAD_FILE_SIZE } from '../constants'
 import { getErrorMessage } from '../utils/error'
 
+function parseBackendOrDefault(
+  backendInput: unknown,
+  fallback: 'openscad' | 'build123d' = 'openscad'
+): 'openscad' | 'build123d' {
+  const parseResult = CADBackendSchema.safeParse(backendInput)
+  return parseResult.success ? parseResult.data : fallback
+}
+
 export function registerFileHandlers(): void {
   ipcMain.handle('open-scad-file', async (_event, backendInput?: unknown) => {
-    const backend =
-      backendInput !== undefined ? CADBackendSchema.safeParse(backendInput).data ?? 'openscad' : 'openscad'
+    const backend = backendInput !== undefined ? parseBackendOrDefault(backendInput, 'openscad') : 'openscad'
     const isOpenSCAD = backend === 'openscad'
     const title = isOpenSCAD ? 'Open OpenSCAD File' : 'Open build123d Python File'
     const filters = isOpenSCAD
@@ -35,15 +42,14 @@ export function registerFileHandlers(): void {
     }
 
     const filePath = result.filePaths[0]
-    const stats = fs.statSync(filePath)
-    if (stats.size > MAX_SCAD_FILE_SIZE) {
-      return {
-        canceled: true,
-        error: `File too large: ${(stats.size / 1024 / 1024).toFixed(2)}MB (max ${MAX_SCAD_FILE_SIZE / 1024 / 1024}MB)`
-      }
-    }
-
     try {
+      const stats = fs.statSync(filePath)
+      if (stats.size > MAX_SCAD_FILE_SIZE) {
+        return {
+          canceled: true,
+          error: `File too large: ${(stats.size / 1024 / 1024).toFixed(2)}MB (max ${MAX_SCAD_FILE_SIZE / 1024 / 1024}MB)`
+        }
+      }
       const code = fs.readFileSync(filePath, 'utf-8')
       addToRecentFiles(filePath)
       return { canceled: false, filePath, code }
@@ -60,8 +66,7 @@ export function registerFileHandlers(): void {
         return { canceled: true, error: 'Invalid code input' }
       }
       const code = codeParse.data
-      const backend =
-        backendInput !== undefined ? CADBackendSchema.safeParse(backendInput).data ?? 'openscad' : 'openscad'
+      const backend = backendInput !== undefined ? parseBackendOrDefault(backendInput, 'openscad') : 'openscad'
 
       if (filePathInput !== undefined && filePathInput !== null && filePathInput !== '') {
         const pathParse = FilePathSchema.safeParse(filePathInput)
@@ -120,7 +125,7 @@ export function registerFileHandlers(): void {
         return { canceled: true, error: 'Invalid code input' }
       }
       const code = codeParse.data
-      const backend = backendInput !== undefined ? CADBackendSchema.safeParse(backendInput).data : undefined
+      const backend = backendInput !== undefined ? parseBackendOrDefault(backendInput, 'openscad') : undefined
       const isBuild123d = backend === 'build123d'
       const ext = isBuild123d ? '.py' : '.scad'
       const baseName =
@@ -141,8 +146,12 @@ export function registerFileHandlers(): void {
         return { canceled: true }
       }
 
-      fs.writeFileSync(result.filePath, code, 'utf-8')
-      return { canceled: false, filePath: result.filePath }
+      try {
+        fs.writeFileSync(result.filePath, code, 'utf-8')
+        return { canceled: false, filePath: result.filePath }
+      } catch (error) {
+        return { canceled: true, error: `Failed to export file: ${getErrorMessage(error)}` }
+      }
     }
   )
 
@@ -167,8 +176,12 @@ export function registerFileHandlers(): void {
       return { canceled: true }
     }
 
-    const buffer = Buffer.from(stlBase64, 'base64')
-    fs.writeFileSync(result.filePath, buffer)
-    return { canceled: false, filePath: result.filePath }
+    try {
+      const buffer = Buffer.from(stlBase64, 'base64')
+      fs.writeFileSync(result.filePath, buffer)
+      return { canceled: false, filePath: result.filePath }
+    } catch (error) {
+      return { canceled: true, error: `Failed to export STL: ${getErrorMessage(error)}` }
+    }
   })
 }

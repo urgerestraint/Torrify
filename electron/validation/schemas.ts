@@ -56,3 +56,18 @@ export const GatewayRequestSchema = z.object({
 })
 
 export const WindowTitleSchema = z.string().max(256)
+
+export const LLMMessageSchema = z.object({
+  role: z.enum(['user', 'assistant', 'system']),
+  content: z.string().max(MAX_CODE_SIZE),
+  imageDataUrls: z.array(z.string().max(MAX_PATH_LENGTH)).max(16).optional()
+})
+
+export const LLMRequestPayloadSchema = z.object({
+  messages: z.array(LLMMessageSchema).min(1).max(200),
+  currentCode: CodeSchema.optional(),
+  cadBackend: CADBackendSchema.optional(),
+  apiContext: z.string().max(MAX_CODE_SIZE).optional()
+})
+
+export const StreamIdSchema = z.string().min(1).max(256)

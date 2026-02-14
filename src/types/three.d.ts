@@ -81,7 +81,7 @@ declare module 'three' {
 }
 declare module 'three/examples/jsm/controls/OrbitControls' {
   export class OrbitControls {
-    constructor(camera: any, domElement: HTMLElement)
+    constructor(camera: import('three').Camera, domElement: HTMLElement)
     enableDamping: boolean
     dampingFactor: number
     target: { set: (x: number, y: number, z: number) => void }

@@ -48,7 +48,8 @@ export function useRecentFiles() {
 
   useEffect(() => {
     if (isRecentMenuOpen && recentFiles.length > 0) {
-      window.setTimeout(() => focusRecentMenuItem(0), 0)
+      const timerId = window.setTimeout(() => focusRecentMenuItem(0), 0)
+      return () => window.clearTimeout(timerId)
     } else {
       setRecentMenuFocusIndex(-1)
     }

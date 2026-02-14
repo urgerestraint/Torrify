@@ -18,6 +18,24 @@ import { getErrorMessage } from '../utils/error'
 import { logger } from '../utils/logger'
 import type { Settings } from '../settings/types'
 
+function normalizeOllamaEndpoint(endpointInput: unknown): { ok: true; endpoint: string } | { ok: false; error: string } {
+  if (endpointInput === undefined || endpointInput === null || endpointInput === '') {
+    return { ok: true, endpoint: 'http://127.0.0.1:11434' }
+  }
+  if (typeof endpointInput !== 'string' || endpointInput.length > 2048) {
+    return { ok: false, error: 'Invalid Ollama endpoint' }
+  }
+  try {
+    const url = new URL(endpointInput.trim())
+    if (url.protocol !== 'http:' && url.protocol !== 'https:') {
+      return { ok: false, error: 'Invalid Ollama endpoint protocol' }
+    }
+    return { ok: true, endpoint: url.toString().replace(/\/+$/, '') }
+  } catch {
+    return { ok: false, error: 'Invalid Ollama endpoint' }
+  }
+}
+
 export function registerSettingsHandlers(): void {
   ipcMain.handle('get-settings', () => {
     return getCurrentSettings()
@@ -32,7 +50,7 @@ export function registerSettingsHandlers(): void {
     if (!parseResult.success) {
       return { success: false, error: 'Invalid settings format' }
     }
-    const settings = parseResult.data as Settings
+    const settings: Settings = parseResult.data
     setCurrentSettings(settings)
     saveSettings(settings)
     return { success: true }
@@ -102,7 +120,7 @@ export function registerSettingsHandlers(): void {
 
   ipcMain.handle('should-show-welcome', () => {
     const settings = getCurrentSettings()
-    const openscadConfigured = settings.openscadPath && fs.existsSync(settings.openscadPath)
+    const openscadConfigured = Boolean(settings.openscadPath) && fs.existsSync(settings.openscadPath)
     const apiKeyConfigured =
       settings.llm.provider === 'openrouter'
         ? !!process.env.OPENROUTER_API_KEY?.trim()
@@ -114,9 +132,13 @@ export function registerSettingsHandlers(): void {
     return !openscadConfigured || !apiKeyConfigured
   })
 
-  ipcMain.handle('get-ollama-models', async (_event, endpoint?: string) => {
+  ipcMain.handle('get-ollama-models', async (_event, endpointInput?: unknown) => {
     try {
-      const ollamaEndpoint = endpoint || 'http://127.0.0.1:11434'
+      const endpointResult = normalizeOllamaEndpoint(endpointInput)
+      if (!endpointResult.ok) {
+        return { success: false, models: [], error: endpointResult.error }
+      }
+      const ollamaEndpoint = endpointResult.endpoint
       const response = await fetch(`${ollamaEndpoint}/api/tags`)
 
       if (!response.ok) {

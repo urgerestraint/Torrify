@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { logger } from '../utils/logger'
 
 /**
@@ -19,6 +19,15 @@ interface DemoDialogProps {
  */
 function DemoDialog({ isOpen, onClose, onRunDemo }: DemoDialogProps) {
   const [isClosing, setIsClosing] = useState(false)
+  const closeTimerRef = useRef<number | null>(null)
+
+  useEffect(() => {
+    return () => {
+      if (closeTimerRef.current !== null) {
+        window.clearTimeout(closeTimerRef.current)
+      }
+    }
+  }, [])
 
   if (!isOpen) return null
 
@@ -39,9 +48,10 @@ function DemoDialog({ isOpen, onClose, onRunDemo }: DemoDialogProps) {
       })
 
     // Animation delay before removing from DOM
-    setTimeout(() => {
+    closeTimerRef.current = window.setTimeout(() => {
       onClose()
       setIsClosing(false)
+      closeTimerRef.current = null
     }, 200)
   }
 
@@ -50,10 +60,11 @@ function DemoDialog({ isOpen, onClose, onRunDemo }: DemoDialogProps) {
    */
   const handleRunDemo = () => {
     setIsClosing(true)
-    setTimeout(() => {
+    closeTimerRef.current = window.setTimeout(() => {
       onClose()
       setIsClosing(false)
       onRunDemo()
+      closeTimerRef.current = null
     }, 200)
   }
 
@@ -147,4 +158,3 @@ function DemoDialog({ isOpen, onClose, onRunDemo }: DemoDialogProps) {
 }
 
 export default DemoDialog
-

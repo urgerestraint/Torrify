@@ -186,6 +186,7 @@ function ChatPanel({
   const streamControllerRef = useRef<StreamController | null>(null)
   const streamingMessageIdRef = useRef<number | null>(null)
   const onApplyCodeRef = useRef(onApplyCode)
+  const sendToLlmRef = useRef<(userInput: string, imageDataUrls?: string[]) => Promise<void>>(async () => {})
   onApplyCodeRef.current = onApplyCode
 
   // Handle file selection for image import
@@ -242,7 +243,7 @@ function ChatPanel({
 
   // Load provider status (e.g. "Google Gemini (gemini-3-flash)") on mount and settings change
   useEffect(() => {
-    loadLLMStatus()
+    void loadLLMStatus()
   }, [settingsVersion])
 
   /**
@@ -250,20 +251,26 @@ function ChatPanel({
    * This context is injected into LLM prompts to improve code generation accuracy.
    */
   useEffect(() => {
+    let cancelled = false
     const loadContext = async () => {
       try {
         const result = await window.electronAPI.getContext(cadBackend)
+        if (cancelled) return
         if (result.success && result.content) {
           setApiContext(result.content)
         } else {
           setApiContext(undefined)
         }
       } catch (error) {
+        if (cancelled) return
         logger.error('Failed to load API context', error)
         setApiContext(undefined)
       }
     }
-    loadContext()
+    void loadContext()
+    return () => {
+      cancelled = true
+    }
   }, [cadBackend])
 
   /**
@@ -298,14 +305,13 @@ ${pendingDiagnosis.code}
         
         onDiagnosisSent?.()
         
-        await sendToLlm(diagnosisText)
+        await sendToLlmRef.current(diagnosisText)
       }
       
-      processDiagnosis()
+      void processDiagnosis().catch((error) => {
+        logger.error('Failed to process automatic diagnosis request', error)
+      })
     }
-    // Intentionally omit sendToLlm from deps: we only want one diagnosis request per
-    // pendingDiagnosis event, and sendToLlm identity changes with chat state updates.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pendingDiagnosis, isLoading, cadBackend, onDiagnosisSent, setMessages])
 
   /**
@@ -497,6 +503,7 @@ ${pendingDiagnosis.code}
       }
     }
   }, [currentCode, messages, onSnapshotsSent, cadBackend, setMessages, apiContext, includeContext])
+  sendToLlmRef.current = sendToLlm
 
   /**
    * Orchestrates sending a new user message.

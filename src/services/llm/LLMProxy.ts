@@ -1,10 +1,13 @@
 import type { LLMService, LLMMessage, LLMResponse, CADBackend, StreamCallback, StreamController } from './types'
+import { logger } from '../../utils/logger'
 
 /**
  * Renderer-side proxy that forwards all LLM calls to the main process via IPC.
  * No API keys, endpoints, or secrets are held or used in the renderer.
  */
 export class LLMProxy implements LLMService {
+  private static readonly DEFAULT_BACKEND: CADBackend = 'openscad'
+
   /**
    * Forwards a non-streaming chat request to the main process.
    * 
@@ -18,7 +21,7 @@ export class LLMProxy implements LLMService {
   async sendMessage(
     messages: LLMMessage[],
     currentCode?: string,
-    cadBackend: CADBackend = 'openscad',
+    cadBackend: CADBackend = LLMProxy.DEFAULT_BACKEND,
     apiContext?: string
   ): Promise<LLMResponse> {
     const result = await window.electronAPI.llmSendMessage({
@@ -49,7 +52,7 @@ export class LLMProxy implements LLMService {
     messages: LLMMessage[],
     onChunk: StreamCallback,
     currentCode?: string,
-    cadBackend: CADBackend = 'openscad',
+    cadBackend: CADBackend = LLMProxy.DEFAULT_BACKEND,
     apiContext?: string
   ): Promise<StreamController> {
     const result = await window.electronAPI.llmStreamMessage({
@@ -65,7 +68,9 @@ export class LLMProxy implements LLMService {
     window.electronAPI.onLlmStreamChunk(streamId, onChunk)
     return {
       abort: () => {
-        window.electronAPI.llmStreamAbort(streamId)
+        void Promise.resolve(window.electronAPI.llmStreamAbort(streamId)).catch((error) => {
+          logger.warn('Failed to abort LLM stream', error)
+        })
       }
     }
   }

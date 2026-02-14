@@ -31,8 +31,11 @@ describe('buildSystemContent', () => {
       cadBackend: 'openscad'
     })
     expect(Array.isArray(result)).toBe(true)
-    expect((result as Array<{ type: string; text: string }>).length).toBeGreaterThan(0)
-    expect((result as Array<{ type: string; text: string }>)[0]).toHaveProperty('type', 'text')
+    if (!Array.isArray(result)) {
+      throw new Error('Expected array content for cache-capable model')
+    }
+    expect(result.length).toBeGreaterThan(0)
+    expect(result[0]).toHaveProperty('type', 'text')
   })
 })
 
@@ -50,9 +53,12 @@ describe('buildMessageContent', () => {
     }
     const result = buildMessageContent(message)
     expect(Array.isArray(result)).toBe(true)
-    expect((result as Array<{ type: string }>).length).toBe(2)
-    expect((result as Array<{ type: string }>)[0].type).toBe('text')
-    expect((result as Array<{ type: string; image_url?: { url: string } }>)[1].type).toBe('image_url')
+    if (!Array.isArray(result)) {
+      throw new Error('Expected array content for image message')
+    }
+    expect(result.length).toBe(2)
+    expect(result[0].type).toBe('text')
+    expect(result[1].type).toBe('image_url')
   })
 })
 

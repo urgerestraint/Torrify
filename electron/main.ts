@@ -34,6 +34,14 @@ loadSettings()
 
 let mainWindow: BrowserWindow | null = null
 
+function getRendererHtmlPath(): string {
+  const candidates = [
+    path.join(__dirname, '../../dist/index.html'),
+    path.join(__dirname, '../dist/index.html'),
+  ]
+  return candidates.find((candidate) => fs.existsSync(candidate)) ?? candidates[0]
+}
+
 /**
  * Enforce single instance lock.
  * If another instance is launched, focus the already running window.
@@ -76,7 +84,7 @@ function createWindow(): void {
     mainWindow.loadURL(process.env.VITE_DEV_SERVER_URL)
     mainWindow.webContents.openDevTools()
   } else {
-    mainWindow.loadFile(path.join(__dirname, '../dist/index.html'))
+    mainWindow.loadFile(getRendererHtmlPath())
   }
 
   mainWindow.on('closed', () => {

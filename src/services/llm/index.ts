@@ -14,12 +14,12 @@ export * from './types'
  * List of providers that do not require an API key to be set manually in the 
  * application settings (e.g. handled by environment variables or local services).
  */
-const PROVIDERS_WITHOUT_API_KEY: readonly LLMProvider[] = [
+const PROVIDERS_WITHOUT_API_KEY = new Set<LLMProvider>([
   'openrouter', 
   'ollama', 
   'custom', 
   'gateway'
-] as const
+])
 
 /**
  * Determines if a given provider requires a manual API key configuration.
@@ -28,7 +28,7 @@ const PROVIDERS_WITHOUT_API_KEY: readonly LLMProvider[] = [
  * @returns True if the provider requires an API key in the settings
  */
 export const requiresApiKey = (provider: LLMProvider): boolean =>
-  !PROVIDERS_WITHOUT_API_KEY.includes(provider)
+  !PROVIDERS_WITHOUT_API_KEY.has(provider)
 
 /**
  * Factory function to create an LLM service instance.

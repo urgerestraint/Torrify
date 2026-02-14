@@ -43,27 +43,27 @@ export function registerRecentHandlers(): void {
       return { canceled: true, error: 'Invalid file path' }
     }
     const pathResult = validatePath(parseResult.data)
-    if (!pathResult.valid) {
+    if (!pathResult.valid || !pathResult.normalized) {
       return { canceled: true, error: pathResult.error }
     }
-    const filePath = pathResult.normalized!
-
-    if (!fs.existsSync(filePath)) {
-      return { canceled: true, error: 'File no longer exists' }
-    }
-
-    const stats = fs.statSync(filePath)
-    if (stats.size > MAX_SCAD_FILE_SIZE) {
-      return {
-        canceled: true,
-        error: `File too large: ${(stats.size / 1024 / 1024).toFixed(2)}MB (max ${MAX_SCAD_FILE_SIZE / 1024 / 1024}MB)`
-      }
-    }
+    const filePath = pathResult.normalized
 
     const ext = path.extname(filePath).toLowerCase()
     const isProject = ext === '.torrify' || ext === '.opencursor' || ext === '.json'
 
     try {
+      if (!fs.existsSync(filePath)) {
+        return { canceled: true, error: 'File no longer exists' }
+      }
+
+      const stats = fs.statSync(filePath)
+      if (stats.size > MAX_SCAD_FILE_SIZE) {
+        return {
+          canceled: true,
+          error: `File too large: ${(stats.size / 1024 / 1024).toFixed(2)}MB (max ${MAX_SCAD_FILE_SIZE / 1024 / 1024}MB)`
+        }
+      }
+
       const content = fs.readFileSync(filePath, 'utf-8')
 
       if (isProject) {

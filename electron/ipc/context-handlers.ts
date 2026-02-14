@@ -11,15 +11,19 @@ import {
 import { FETCH_TIMEOUT_MS, MAX_CONTEXT_FILE_SIZE } from '../constants'
 import { getErrorMessage } from '../utils/error'
 
+function parseBackendInput(backendInput: unknown): 'openscad' | 'build123d' | null {
+  const parseResult = CADBackendSchema.safeParse(backendInput)
+  return parseResult.success ? parseResult.data : null
+}
+
 export function registerContextHandlers(): void {
   const bundledDir = getBundledResourcesDir()
 
   ipcMain.handle('get-context', async (_event, backendInput: unknown) => {
-    const parseResult = CADBackendSchema.safeParse(backendInput)
-    if (!parseResult.success) {
+    const backend = parseBackendInput(backendInput)
+    if (!backend) {
       return { success: false, error: 'Invalid backend' }
     }
-    const backend = parseResult.data
     try {
       const filename = backend === 'build123d' ? 'context_build123d.txt' : 'context_openscad.txt'
       const content = loadContextFile(filename, bundledDir)
@@ -45,11 +49,15 @@ export function registerContextHandlers(): void {
 
       const getFileInfo = (filepath: string) => {
         if (fs.existsSync(filepath)) {
-          const stats = fs.statSync(filepath)
-          return {
-            exists: true,
-            size: stats.size,
-            modified: stats.mtime.toISOString()
+          try {
+            const stats = fs.statSync(filepath)
+            return {
+              exists: true,
+              size: stats.size,
+              modified: stats.mtime.toISOString()
+            }
+          } catch {
+            return { exists: false, size: 0, modified: null }
           }
         }
         return { exists: false, size: 0, modified: null }
@@ -74,11 +82,10 @@ export function registerContextHandlers(): void {
   })
 
   ipcMain.handle('update-context-from-cloud', async (_event, backendInput: unknown, urlInput: unknown) => {
-    const backendParse = CADBackendSchema.safeParse(backendInput)
-    if (!backendParse.success) {
+    const backend = parseBackendInput(backendInput)
+    if (!backend) {
       return { success: false, error: 'Invalid backend' }
     }
-    const backend = backendParse.data
     if (typeof urlInput !== 'string' || urlInput.length > 2048) {
       return { success: false, error: 'Invalid URL' }
     }
@@ -141,8 +148,8 @@ export function registerContextHandlers(): void {
   })
 
   ipcMain.handle('reset-context-to-factory', async (_event, backendInput?: unknown) => {
-    const backend = backendInput !== undefined ? CADBackendSchema.safeParse(backendInput).data : undefined
-    if (backendInput !== undefined && !backend) {
+    const backend = backendInput !== undefined ? parseBackendInput(backendInput) : undefined
+    if (backendInput !== undefined && backend === null) {
       return { success: false, error: 'Invalid backend' }
     }
     try {
