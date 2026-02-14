@@ -3,9 +3,39 @@ import { buildMessageContent, buildSystemContent, extractContent, streamSseRespo
 import { logger } from '../utils/logger'
 import { GATEWAY_BASE_URL } from '../constants'
 
+const GATEWAY_CONTEXT_WINDOW_TOKENS = 128000
+const TOKEN_SAFETY_MARGIN = 2048
+const MIN_COMPLETION_TOKENS = 256
+
 function getGatewayEndpoint(): string {
   const base = GATEWAY_BASE_URL.replace(/\/$/, '')
   return `${base}/api/chat`
+}
+
+function estimateTokensFromText(text: string): number {
+  if (!text) {
+    return 0
+  }
+  // Heuristic approximation for GPT-like tokenization.
+  return Math.ceil(text.length / 4)
+}
+
+function estimateTokensFromContent(content: MessageContent | SystemMessageContent): number {
+  if (typeof content === 'string') {
+    return estimateTokensFromText(content)
+  }
+
+  let total = 0
+  for (const part of content) {
+    if (typeof part.text === 'string') {
+      total += estimateTokensFromText(part.text)
+    }
+    if ('image_url' in part && part.image_url?.url) {
+      // Keep a fixed allowance for image parts to avoid optimistic budgeting.
+      total += 512
+    }
+  }
+  return total
 }
 
 export class GatewayService implements LLMService {
@@ -23,6 +53,28 @@ export class GatewayService implements LLMService {
         content: buildMessageContent(message)
       }))
     ]
+  }
+
+  private getMaxOutputTokens(payloadMessages: Array<{ role: string; content: MessageContent }>): number {
+    const configuredMax = this.config.maxTokens ?? GATEWAY_CONTEXT_WINDOW_TOKENS
+    const estimatedPromptTokens = payloadMessages.reduce((sum, message) => {
+      return sum + estimateTokensFromContent(message.content)
+    }, 0)
+
+    const available = GATEWAY_CONTEXT_WINDOW_TOKENS - estimatedPromptTokens - TOKEN_SAFETY_MARGIN
+    if (available < MIN_COMPLETION_TOKENS) {
+      throw new Error('Prompt is too large for gateway context window. Reduce context/code size and retry.')
+    }
+
+    const bounded = Math.max(MIN_COMPLETION_TOKENS, Math.min(configuredMax, available))
+    if (bounded < configuredMax) {
+      logger.info('[Gateway] Reduced max_tokens to fit context window', {
+        configuredMax,
+        bounded,
+        estimatedPromptTokens
+      })
+    }
+    return bounded
   }
 
   async sendMessage(messages: LLMMessage[], currentCode?: string, cadBackend: CADBackend = 'openscad', apiContext?: string): Promise<LLMResponse> {
@@ -47,13 +99,14 @@ export class GatewayService implements LLMService {
       loggerPrefix: 'Gateway'
     })
     const payloadMessages = this.buildPayloadMessages(messages, systemContent)
+    const maxOutputTokens = this.getMaxOutputTokens(payloadMessages)
 
     const payload = {
       model: this.config.model,
       messages: payloadMessages,
       stream: false,
       temperature: this.config.temperature ?? 0.7,
-      max_tokens: this.config.maxTokens ?? 128000
+      max_tokens: maxOutputTokens
     }
 
     const response = await fetch(endpoint, {
@@ -130,6 +183,7 @@ export class GatewayService implements LLMService {
           loggerPrefix: 'Gateway'
         })
         const payloadMessages = this.buildPayloadMessages(messages, systemContent)
+        const maxOutputTokens = this.getMaxOutputTokens(payloadMessages)
 
         const response = await fetch(endpoint, {
           method: 'POST',
@@ -142,7 +196,7 @@ export class GatewayService implements LLMService {
             messages: payloadMessages,
             stream: true,
             temperature: this.config.temperature ?? 0.7,
-            max_tokens: this.config.maxTokens ?? 128000
+            max_tokens: maxOutputTokens
           }),
           signal: abortController.signal
         })

@@ -7,18 +7,18 @@ import { logger } from '../utils/logger'
 
 const DOC_FILES = [
   'README.md',
-  'docs/README.md',
+  'docs/index.md',
   'docs/getting-started/QUICKSTART.md',
   'docs/getting-started/START_HERE.md',
   'docs/getting-started/START_APP.md',
-  'docs/developer/DEV_README.md',
+  'docs/developer/README.md',
   'docs/developer/TESTING.md',
-  'docs/architecture/PROJECT_SUMMARY.md',
+  'docs/architecture/ARCHITECTURE.md',
   'docs/features/LLM_INTEGRATION.md',
-  'docs/features/SETTINGS_FEATURE.md',
+  'docs/features/SETTINGS.md',
   'docs/features/WHATS_NEW.md',
   'docs/reference/QUICK_REFERENCE.md',
-  'docs/reference/DOCUMENTATION_INDEX.md',
+  'docs/reference/index.md',
   'docs/NEXT_STEPS.md'
 ]
 

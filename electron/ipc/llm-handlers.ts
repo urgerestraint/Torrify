@@ -9,8 +9,9 @@ import { ipcMain } from 'electron'
 import type { BrowserWindow } from 'electron'
 import { getCurrentSettings } from '../settings'
 import { createLLMService } from '../llm'
-import type { LLMMessage, CADBackend } from '../llm'
+import type { CADBackend } from '../llm'
 import { getErrorMessage } from '../utils/error'
+import { LLMRequestPayloadSchema, StreamIdSchema } from '../validation/schemas'
 
 /** Active streaming requests mapped by their unique streamId */
 const streamAbortMap = new Map<string, { readonly abort: () => void }>()
@@ -38,26 +39,12 @@ export function registerLlmHandlers(getMainWindow: () => BrowserWindow | null): 
       return { success: false, error: 'Target window is no longer available' }
     }
 
-    let messages: LLMMessage[]
-    let currentCode: string | undefined
-    let cadBackend: CADBackend = 'openscad'
-    let apiContext: string | undefined
-
-    // Payload validation and type coercion
-    if (payload && typeof payload === 'object' && Array.isArray((payload as { messages?: unknown }).messages)) {
-      const p = payload as { 
-        readonly messages: LLMMessage[]
-        readonly currentCode?: string
-        readonly cadBackend?: CADBackend
-        readonly apiContext?: string 
-      }
-      messages = p.messages
-      currentCode = p.currentCode
-      cadBackend = p.cadBackend === 'build123d' ? 'build123d' : 'openscad'
-      apiContext = p.apiContext
-    } else {
+    const parseResult = LLMRequestPayloadSchema.safeParse(payload)
+    if (!parseResult.success) {
       return { success: false, error: 'Invalid message payload structure' }
     }
+    const { messages, currentCode, apiContext } = parseResult.data
+    const cadBackend: CADBackend = parseResult.data.cadBackend === 'build123d' ? 'build123d' : 'openscad'
 
     try {
       const settings = getCurrentSettings()
@@ -82,25 +69,12 @@ export function registerLlmHandlers(getMainWindow: () => BrowserWindow | null): 
       return { streamId: null, error: 'Target window is no longer available' }
     }
 
-    let messages: LLMMessage[]
-    let currentCode: string | undefined
-    let cadBackend: CADBackend = 'openscad'
-    let apiContext: string | undefined
-
-    if (payload && typeof payload === 'object' && Array.isArray((payload as { messages?: unknown }).messages)) {
-      const p = payload as { 
-        readonly messages: LLMMessage[]
-        readonly currentCode?: string
-        readonly cadBackend?: CADBackend
-        readonly apiContext?: string 
-      }
-      messages = p.messages
-      currentCode = p.currentCode
-      cadBackend = p.cadBackend === 'build123d' ? 'build123d' : 'openscad'
-      apiContext = p.apiContext
-    } else {
+    const parseResult = LLMRequestPayloadSchema.safeParse(payload)
+    if (!parseResult.success) {
       return { streamId: null, error: 'Invalid streaming payload structure' }
     }
+    const { messages, currentCode, apiContext } = parseResult.data
+    const cadBackend: CADBackend = parseResult.data.cadBackend === 'build123d' ? 'build123d' : 'openscad'
 
     const streamId = nextStreamId()
 
@@ -152,13 +126,14 @@ export function registerLlmHandlers(getMainWindow: () => BrowserWindow | null): 
    * Forcefully terminates a network request for a specific stream ID.
    */
   ipcMain.handle('llm-stream-abort', (_event, streamId: unknown) => {
-    if (typeof streamId !== 'string') {
+    const parseResult = StreamIdSchema.safeParse(streamId)
+    if (!parseResult.success) {
       return
     }
-    const entry = streamAbortMap.get(streamId)
+    const entry = streamAbortMap.get(parseResult.data)
     if (entry) {
       entry.abort()
-      streamAbortMap.delete(streamId)
+      streamAbortMap.delete(parseResult.data)
     }
   })
 }

@@ -49,9 +49,10 @@ function ConfirmDialog({
     previousFocusRef.current = document.activeElement as HTMLElement
     
     // Defer focus to allow rendering to complete
-    window.setTimeout(() => confirmButtonRef.current?.focus(), 0)
+    const timeoutId = window.setTimeout(() => confirmButtonRef.current?.focus(), 0)
 
     return () => {
+      window.clearTimeout(timeoutId)
       previousFocusRef.current?.focus()
     }
   }, [isOpen])

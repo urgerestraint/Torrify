@@ -218,23 +218,24 @@ function App() {
   const demoState = useDemo(demoSetters)
   const { isDemoDialogOpen, setIsDemoDialogOpen, runDemo } = demoState
 
-  useEffect(() => {
-    const checkWelcome = async () => {
-      try {
-        const shouldShow = await window.electronAPI.shouldShowWelcome()
-        setIsWelcomeOpen(shouldShow)
-        if (!shouldShow) {
-          await new Promise((resolve) => setTimeout(resolve, 500))
-          const settings = await window.electronAPI.getSettings()
-          if (!settings.hasSeenDemo) setIsDemoDialogOpen(true)
-        }
-      } catch (error) {
-        logger.error('Failed to check welcome status', error)
-        setIsWelcomeOpen(true)
+  const syncWelcomeAndDemoState = useCallback(async () => {
+    try {
+      const shouldShow = await window.electronAPI.shouldShowWelcome()
+      setIsWelcomeOpen(shouldShow)
+      if (!shouldShow) {
+        await new Promise((resolve) => setTimeout(resolve, 500))
+        const settings = await window.electronAPI.getSettings()
+        if (!settings.hasSeenDemo) setIsDemoDialogOpen(true)
       }
+    } catch (error) {
+      logger.error('Failed to check welcome status', error)
+      setIsWelcomeOpen(true)
     }
-    checkWelcome()
   }, [setIsDemoDialogOpen])
+
+  useEffect(() => {
+    void syncWelcomeAndDemoState()
+  }, [syncWelcomeAndDemoState])
 
   const refreshSettings = useCallback(async () => {
     try {
@@ -326,7 +327,9 @@ function App() {
       }
       await window.electronAPI.setWindowTitle(title)
     }
-    updateTitle()
+    void updateTitle().catch((error) => {
+      logger.error('Failed to update window title', error)
+    })
   }, [fileOps.currentFilePath, fileOps.hasUnsavedChanges])
 
   /**
@@ -416,28 +419,36 @@ function App() {
     }
   }, [loadRecentFiles, showConfirm])
 
+  const {
+    handleOpenFile,
+    handleNewFile,
+    handleSaveAs,
+    handleSaveFile,
+    currentFilePath
+  } = fileOps
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.ctrlKey && e.key === 'o') {
         e.preventDefault()
-        fileOps.handleOpenFile()
+        handleOpenFile()
       }
       if (e.ctrlKey && e.key === 'n') {
         e.preventDefault()
-        fileOps.handleNewFile()
+        handleNewFile()
       }
       if (e.ctrlKey && e.shiftKey && e.key === 'S') {
         e.preventDefault()
-        fileOps.handleSaveAs()
+        handleSaveAs()
       }
-      if (e.ctrlKey && e.key === 's' && !e.shiftKey && fileOps.currentFilePath) {
+      if (e.ctrlKey && e.key === 's' && !e.shiftKey && currentFilePath) {
         e.preventDefault()
-        fileOps.handleSaveFile()
+        handleSaveFile()
       }
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [fileOps.handleOpenFile, fileOps.handleNewFile, fileOps.handleSaveAs, fileOps.handleSaveFile, fileOps.currentFilePath, fileOps])
+  }, [currentFilePath, handleNewFile, handleOpenFile, handleSaveAs, handleSaveFile])
 
   /**
    * Persists the current IDE state (code + chat) into a .torrify project file.
@@ -477,12 +488,16 @@ function App() {
         await showAlert('Load Project Failed', 'Invalid project file')
         return
       }
+      if (!result.filePath) {
+        await showAlert('Load Project Failed', 'Project path missing in load response')
+        return
+      }
       const project = result.project
       setCode(project.code ?? fileOps.DEFAULT_CODE)
       setStlBase64(project.stlBase64 ?? null)
       setPreviewImage(null)
       setRenderError(null)
-      fileOps.setCurrentFilePath(result.filePath!)
+      fileOps.setCurrentFilePath(result.filePath)
       fileOps.setOriginalCode(project.code ?? fileOps.DEFAULT_CODE)
       fileOps.setHasUnsavedChanges(false)
       setEditorKey((prev) => prev + 1)
@@ -665,13 +680,7 @@ function App() {
           setIsSettingsOpen(false)
           setSettingsInitialTab(null)
           await refreshSettings()
-          const shouldShow = await window.electronAPI.shouldShowWelcome()
-          setIsWelcomeOpen(shouldShow)
-          if (!shouldShow) {
-            await new Promise((resolve) => setTimeout(resolve, 500))
-            const settings = await window.electronAPI.getSettings()
-            if (!settings.hasSeenDemo) setIsDemoDialogOpen(true)
-          }
+          await syncWelcomeAndDemoState()
         }}
       />
 

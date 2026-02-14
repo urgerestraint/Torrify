@@ -52,6 +52,7 @@ function SettingsModal({ isOpen, onClose, initialTab }: SettingsModalProps) {
 
   const dialogRef = useRef<HTMLDivElement>(null)
   const previousFocusRef = useRef<HTMLElement | null>(null)
+  const closeTimerRef = useRef<number | null>(null)
 
   const { ollamaModels, isLoadingOllamaModels, ollamaModelsError, loadOllamaModels } = useOllamaModels(
     settings,
@@ -96,8 +97,8 @@ function SettingsModal({ isOpen, onClose, initialTab }: SettingsModalProps) {
 
   useEffect(() => {
     if (isOpen) {
-      loadSettings()
-      loadContextStatus()
+      void loadSettings()
+      void loadContextStatus()
       if (initialTab) setActiveTab(initialTab)
     }
   }, [isOpen, loadSettings, loadContextStatus, initialTab])
@@ -108,8 +109,9 @@ function SettingsModal({ isOpen, onClose, initialTab }: SettingsModalProps) {
     const focusTarget = dialogRef.current?.querySelector<HTMLElement>(
       'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
     )
-    window.setTimeout(() => focusTarget?.focus(), 0)
+    const timeoutId = window.setTimeout(() => focusTarget?.focus(), 0)
     return () => {
+      window.clearTimeout(timeoutId)
       previousFocusRef.current?.focus()
     }
   }, [isOpen])
@@ -124,11 +126,27 @@ function SettingsModal({ isOpen, onClose, initialTab }: SettingsModalProps) {
       setOpenRouterKeySet(null)
       return
     }
+    let cancelled = false
     window.electronAPI
       .getOpenRouterConfigured()
-      .then(setOpenRouterKeySet)
-      .catch(() => setOpenRouterKeySet(false))
+      .then((configured) => {
+        if (!cancelled) setOpenRouterKeySet(configured)
+      })
+      .catch(() => {
+        if (!cancelled) setOpenRouterKeySet(false)
+      })
+    return () => {
+      cancelled = true
+    }
   }, [isOpen, settings])
+
+  useEffect(() => {
+    return () => {
+      if (closeTimerRef.current !== null) {
+        window.clearTimeout(closeTimerRef.current)
+      }
+    }
+  }, [])
 
   const checkPath = async (path: string) => {
     if (!path) {
@@ -309,7 +327,10 @@ function SettingsModal({ isOpen, onClose, initialTab }: SettingsModalProps) {
     try {
       await window.electronAPI.saveSettings(settings)
       setSaveMessage('Settings saved successfully!')
-      setTimeout(() => onClose(), 1000)
+      closeTimerRef.current = window.setTimeout(() => {
+        onClose()
+        closeTimerRef.current = null
+      }, 1000)
     } catch {
       setSaveMessage('Failed to save settings')
     } finally {

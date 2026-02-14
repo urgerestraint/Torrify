@@ -25,6 +25,19 @@ export interface MenuHandlerConfig {
  */
 export function useMenuHandlers(handlers: MenuHandlerConfig) {
   const menuHandlersRef = useRef<Record<string, () => void>>({})
+  const {
+    handleNewFile,
+    handleOpenFile,
+    handleSaveFile,
+    handleSaveAs,
+    handleExportScad,
+    handleExportStl,
+    handleRender,
+    updateLlmSettings,
+    onOpenSettings,
+    onOpenHelpBot,
+    onShowDemo
+  } = handlers
 
   useEffect(() => {
     Object.keys(menuHandlersRef.current).forEach((channel) => {
@@ -32,28 +45,28 @@ export function useMenuHandlers(handlers: MenuHandlerConfig) {
     })
 
     const map: Record<string, () => void> = {
-      'menu-new-file': handlers.handleNewFile,
-      'menu-open-file': handlers.handleOpenFile,
-      'menu-save-file': handlers.handleSaveFile,
-      'menu-save-as': handlers.handleSaveAs,
-      'menu-export-scad': handlers.handleExportScad,
-      'menu-export-stl': handlers.handleExportStl,
-      'menu-render': handlers.handleRender,
-      'menu-llm-toggle': () => handlers.updateLlmSettings((llm) => ({ ...llm, enabled: !llm.enabled })),
+      'menu-new-file': handleNewFile,
+      'menu-open-file': handleOpenFile,
+      'menu-save-file': handleSaveFile,
+      'menu-save-as': handleSaveAs,
+      'menu-export-scad': handleExportScad,
+      'menu-export-stl': handleExportStl,
+      'menu-render': handleRender,
+      'menu-llm-toggle': () => updateLlmSettings((llm) => ({ ...llm, enabled: !llm.enabled })),
       'menu-llm-byok': () =>
-        handlers.updateLlmSettings((llm) => ({ ...llm, provider: 'gemini', model: DEFAULT_MODELS.gemini })),
+        updateLlmSettings((llm) => ({ ...llm, provider: 'gemini', model: DEFAULT_MODELS.gemini })),
       'menu-llm-pro': () =>
-        handlers.updateLlmSettings((llm) => ({
+        updateLlmSettings((llm) => ({
           ...llm,
           provider: 'gateway',
           model: DEFAULT_MODELS.gateway,
           apiKey: '',
           gatewayLicenseKey: llm.gatewayLicenseKey ?? ''
         })),
-      'menu-llm-settings': handlers.onOpenSettings,
-      'menu-help-bot': handlers.onOpenHelpBot,
-      'menu-show-demo': handlers.onShowDemo,
-      'menu-settings': handlers.onOpenSettings
+      'menu-llm-settings': onOpenSettings,
+      'menu-help-bot': onOpenHelpBot,
+      'menu-show-demo': onShowDemo,
+      'menu-settings': onOpenSettings
     }
 
     menuHandlersRef.current = map
@@ -67,17 +80,16 @@ export function useMenuHandlers(handlers: MenuHandlerConfig) {
       })
     }
   }, [
-    handlers.handleNewFile,
-    handlers.handleOpenFile,
-    handlers.handleSaveFile,
-    handlers.handleSaveAs,
-    handlers.handleExportScad,
-    handlers.handleExportStl,
-    handlers.handleRender,
-    handlers.updateLlmSettings,
-    handlers.onOpenSettings,
-    handlers.onOpenHelpBot,
-    handlers.onShowDemo,
-    handlers
+    handleNewFile,
+    handleOpenFile,
+    handleSaveFile,
+    handleSaveAs,
+    handleExportScad,
+    handleExportStl,
+    handleRender,
+    updateLlmSettings,
+    onOpenSettings,
+    onOpenHelpBot,
+    onShowDemo
   ])
 }

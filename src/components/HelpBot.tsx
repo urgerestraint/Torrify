@@ -25,29 +25,11 @@ function HelpBot({ isOpen, onClose }: HelpBotProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
 
-  // Load documentation on mount
-  useEffect(() => {
-    if (isOpen) {
-      loadDocumentation()
-    }
-  }, [isOpen])
-
-  // Scroll to bottom when messages change
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages])
-
-  // Focus input when modal opens
-  useEffect(() => {
-    if (isOpen && inputRef.current) {
-      setTimeout(() => inputRef.current?.focus(), 100)
-    }
-  }, [isOpen])
-
-  const loadDocumentation = async () => {
+  const loadDocumentation = useCallback(async (cancelledRef?: { current: boolean }) => {
     setIsLoadingDocs(true)
     try {
       const result = await window.electronAPI.loadDocumentation()
+      if (cancelledRef?.current) return
       if (result.success && result.docs) {
         setDocumentation(result.docs)
         
@@ -68,6 +50,7 @@ function HelpBot({ isOpen, onClose }: HelpBotProps) {
         }])
       }
     } catch (error) {
+      if (cancelledRef?.current) return
       logger.error('Failed to load documentation', error)
       setMessages([{
         id: 1,
@@ -77,9 +60,35 @@ function HelpBot({ isOpen, onClose }: HelpBotProps) {
         error: true
       }])
     } finally {
-      setIsLoadingDocs(false)
+      if (!cancelledRef?.current) {
+        setIsLoadingDocs(false)
+      }
     }
-  }
+  }, [])
+
+  // Load documentation on mount
+  useEffect(() => {
+    const cancelState = { current: false }
+    if (isOpen) {
+      void loadDocumentation(cancelState)
+    }
+    return () => {
+      cancelState.current = true
+    }
+  }, [isOpen, loadDocumentation])
+
+  // Scroll to bottom when messages change
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [messages])
+
+  // Focus input when modal opens
+  useEffect(() => {
+    if (isOpen && inputRef.current) {
+      const timerId = window.setTimeout(() => inputRef.current?.focus(), 100)
+      return () => window.clearTimeout(timerId)
+    }
+  }, [isOpen])
 
   const buildDocumentationContext = useCallback((): string => {
     if (Object.keys(documentation).length === 0) return ''
@@ -286,4 +295,3 @@ function HelpBot({ isOpen, onClose }: HelpBotProps) {
 }
 
 export default HelpBot
-

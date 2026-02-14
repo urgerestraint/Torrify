@@ -5,11 +5,15 @@ import { logger } from '../../utils/logger'
 /**
  * Represents a single part of a multi-modal message (text or image).
  */
-export type MessageContentPart = { 
-  readonly type: 'text' | 'image_url'
-  readonly text?: string
-  readonly image_url?: { readonly url: string } 
-}
+export type MessageContentPart =
+  | {
+      readonly type: 'text'
+      readonly text: string
+    }
+  | {
+      readonly type: 'image_url'
+      readonly image_url: { readonly url: string }
+    }
 
 /**
  * The content of an LLM message, either a raw string or an array of parts.
@@ -37,6 +41,34 @@ const CACHE_CAPABLE_MODEL_PREFIXES: readonly string[] = [
   'anthropic/',
   'google/',
 ] as const
+
+function getTextPart(part: unknown): string {
+  if (
+    part !== null &&
+    typeof part === 'object' &&
+    'text' in part &&
+    typeof (part as { text: unknown }).text === 'string'
+  ) {
+    return (part as { text: string }).text
+  }
+  return ''
+}
+
+function getSseDelta(data: string): string | null {
+  try {
+    const parsed = JSON.parse(data) as {
+      choices?: ReadonlyArray<{
+        readonly delta?: {
+          readonly content?: unknown
+        }
+      }>
+    }
+    const delta = parsed.choices?.[0]?.delta?.content
+    return typeof delta === 'string' ? delta : null
+  } catch {
+    return null
+  }
+}
 
 /**
  * Checks if the specified model identifier supports prompt caching features.
@@ -128,7 +160,7 @@ export const extractContent = (content: unknown): string => {
   }
   if (Array.isArray(content)) {
     return content
-      .map((part) => (typeof part?.text === 'string' ? part.text : ''))
+      .map(getTextPart)
       .join('')
       .trim()
   }
@@ -195,14 +227,11 @@ export const streamSseResponse = async (
             return
           }
 
-          try {
-            const parsed = JSON.parse(data)
-            const delta = parsed?.choices?.[0]?.delta?.content
-            if (delta) {
-              accumulated += delta
-              onChunk(delta, accumulated, false)
-            }
-          } catch {
+          const delta = getSseDelta(data)
+          if (delta !== null) {
+            accumulated += delta
+            onChunk(delta, accumulated, false)
+          } else {
             if (loggerPrefix) {
               logger.warn(`[${loggerPrefix}] Failed to parse SSE chunk:`, data)
             }

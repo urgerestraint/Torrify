@@ -10,6 +10,7 @@ import { SETTINGS_DIR, SETTINGS_FILE, LEGACY_SETTINGS_FILE, MAX_RECENT_FILES } f
 import { getDefaultSettings } from './defaults'
 import type { Settings, Writable } from './types'
 import { logger } from '../utils/logger'
+import { SettingsSchema } from '../validation/schemas'
 
 /** Current in-memory state of application settings */
 let currentSettings: Settings = getDefaultSettings()
@@ -63,6 +64,45 @@ function normalizeLoaded(loaded: Settings): Settings {
   return normalized
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === 'object'
+}
+
+function parseSettingsFromJson(data: string): { settings: Settings; hadLegacyMaxTokens: boolean } | null {
+  let parsed: unknown
+  try {
+    parsed = JSON.parse(data)
+  } catch {
+    return null
+  }
+
+  if (!isRecord(parsed)) {
+    return null
+  }
+
+  const defaults = getDefaultSettings()
+  const parsedLlm = isRecord(parsed.llm) ? parsed.llm : {}
+  const mergedCandidate = {
+    ...defaults,
+    ...parsed,
+    llm: {
+      ...defaults.llm,
+      ...parsedLlm
+    }
+  }
+
+  const parseResult = SettingsSchema.safeParse(mergedCandidate)
+  if (!parseResult.success) {
+    return null
+  }
+
+  const hadLegacyMaxTokens = parseResult.data.llm.maxTokens === LEGACY_MAX_TOKENS
+  return {
+    settings: normalizeLoaded(parseResult.data),
+    hadLegacyMaxTokens
+  }
+}
+
 /**
  * Loads persisted settings from the filesystem.
  * Attempts migration from legacy paths if the primary configuration is missing.
@@ -74,25 +114,27 @@ export function loadSettings(): Settings {
     // 1. Primary config path
     if (fs.existsSync(SETTINGS_FILE)) {
       const data = fs.readFileSync(SETTINGS_FILE, 'utf-8')
-      const merged = { ...getDefaultSettings(), ...JSON.parse(data) }
-      const hadLegacyMaxTokens = merged.llm?.maxTokens === LEGACY_MAX_TOKENS
-      const loaded = normalizeLoaded(merged)
-      currentSettings = loaded
-      
-      // Auto-persist if migration occurred
-      if (hadLegacyMaxTokens) {
-        saveSettings(loaded)
+      const parsed = parseSettingsFromJson(data)
+      if (parsed) {
+        currentSettings = parsed.settings
+
+        // Auto-persist if migration occurred
+        if (parsed.hadLegacyMaxTokens) {
+          saveSettings(parsed.settings)
+        }
+        return parsed.settings
       }
-      return loaded
     }
     
     // 2. Fallback to legacy path (migration)
     if (fs.existsSync(LEGACY_SETTINGS_FILE)) {
       const data = fs.readFileSync(LEGACY_SETTINGS_FILE, 'utf-8')
-      const loaded = normalizeLoaded({ ...getDefaultSettings(), ...JSON.parse(data) })
-      currentSettings = loaded
-      saveSettings(loaded)
-      return loaded
+      const parsed = parseSettingsFromJson(data)
+      if (parsed) {
+        currentSettings = parsed.settings
+        saveSettings(parsed.settings)
+        return parsed.settings
+      }
     }
   } catch (error: unknown) {
     logger.error('Failed to parse settings from disk', error)

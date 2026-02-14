@@ -124,11 +124,13 @@ describe('LLM provider contracts', () => {
     const service = new OpenAIService(makeConfig('openai', { model: 'gpt-4o-mini' }))
     const seen: Array<{ delta: string; full: string; done: boolean }> = []
 
-    await new Promise<void>(async (resolve) => {
-      await service.streamMessage(baseMessages, (delta, full, done) => {
-        seen.push({ delta, full, done })
-        if (done) resolve()
-      })
+    await new Promise<void>((resolve, reject) => {
+      void service
+        .streamMessage(baseMessages, (delta, full, done) => {
+          seen.push({ delta, full, done })
+          if (done) resolve()
+        })
+        .catch(reject)
     })
 
     expect(seen[0]).toEqual({ delta: 'hello', full: 'hello', done: false })
