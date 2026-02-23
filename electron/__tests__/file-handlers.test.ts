@@ -161,12 +161,20 @@ describe('file-handlers', () => {
   })
 
   describe('export-stl', () => {
-    it('returns canceled when stlBase64 is null', async () => {
+    it('rejects null payloads at IPC boundary', async () => {
       const result = await (handlers['export-stl'] as (...a: unknown[]) => Promise<unknown>)(
         null,
         null
       )
-      expect(result).toEqual({ canceled: true })
+      expect(result).toEqual({ canceled: true, error: 'Invalid STL payload' })
+    })
+
+    it('rejects malformed base64 payloads', async () => {
+      const result = await (handlers['export-stl'] as (...a: unknown[]) => Promise<unknown>)(
+        null,
+        'not-base64-***'
+      )
+      expect(result).toEqual({ canceled: true, error: 'Invalid STL payload' })
     })
 
     it('returns canceled when dialog is canceled', async () => {

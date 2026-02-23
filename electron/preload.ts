@@ -148,17 +148,3 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.removeAllListeners(channel)
   }
 } satisfies ElectronAPI)
-
-declare global {
-  interface Window {
-    readonly electronAPI: ElectronAPI
-  }
-}
-
-export type {
-  CADBackend,
-  ElectronAPI,
-  LLMRequestPayload,
-  ProjectFile,
-  Settings
-} from '../src/types/electron-api'

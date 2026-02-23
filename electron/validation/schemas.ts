@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { MAX_OUTPUT_FILE_SIZE } from '../constants'
 
 // Size limits
 export const MAX_CODE_SIZE = 1024 * 1024 // 1MB
@@ -71,3 +72,12 @@ export const LLMRequestPayloadSchema = z.object({
 })
 
 export const StreamIdSchema = z.string().min(1).max(256)
+
+const MAX_STL_BASE64_LENGTH = Math.ceil((MAX_OUTPUT_FILE_SIZE * 4) / 3) + 4
+const BASE64_PATTERN = /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/
+
+export const StlBase64Schema = z
+  .string()
+  .min(1)
+  .max(MAX_STL_BASE64_LENGTH)
+  .regex(BASE64_PATTERN)

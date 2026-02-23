@@ -1,10 +1,10 @@
 import { ipcMain, dialog, app } from 'electron'
 import * as fs from 'fs'
 import * as path from 'path'
-import { CodeSchema, FilePathSchema, CADBackendSchema } from '../validation/schemas'
+import { CodeSchema, FilePathSchema, CADBackendSchema, StlBase64Schema } from '../validation/schemas'
 import { validatePath } from '../validation/pathValidator'
 import { addToRecentFiles } from '../settings'
-import { MAX_SCAD_FILE_SIZE } from '../constants'
+import { MAX_OUTPUT_FILE_SIZE, MAX_SCAD_FILE_SIZE } from '../constants'
 import { getErrorMessage } from '../utils/error'
 
 function parseBackendOrDefault(
@@ -155,10 +155,12 @@ export function registerFileHandlers(): void {
     }
   )
 
-  ipcMain.handle('export-stl', async (_event, stlBase64: string | null, currentFilePath?: string) => {
-    if (!stlBase64) {
-      return { canceled: true }
+  ipcMain.handle('export-stl', async (_event, stlBase64Input: unknown, currentFilePath?: string) => {
+    const parseResult = StlBase64Schema.safeParse(stlBase64Input)
+    if (!parseResult.success) {
+      return { canceled: true, error: 'Invalid STL payload' }
     }
+    const stlBase64 = parseResult.data
 
     const baseName =
       currentFilePath && currentFilePath.trim()
@@ -178,6 +180,9 @@ export function registerFileHandlers(): void {
 
     try {
       const buffer = Buffer.from(stlBase64, 'base64')
+      if (buffer.length > MAX_OUTPUT_FILE_SIZE) {
+        return { canceled: true, error: 'STL payload exceeds size limit' }
+      }
       fs.writeFileSync(result.filePath, buffer)
       return { canceled: false, filePath: result.filePath }
     } catch (error) {
