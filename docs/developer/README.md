@@ -35,6 +35,7 @@ npm run test:watch
 | `npm run dev` | Start Vite server only (headless, for browser checks). |
 | `npm run build` | Build renderer and main process for production. |
 | `npm run package` | Create installer for current OS. |
+| `npm run package:publish` | Build installer and publish release metadata/artifacts for auto-update. |
 | `npm run package:win` | Create Windows installer (requires Developer Mode). |
 | `electron . --reset-settings` | Launch app and wipe settings to defaults. |
 
@@ -57,6 +58,10 @@ You **must** enable **Developer Mode** in Windows Settings > Privacy & Security 
 ```bash
 # Build for current OS
 npm run package
+
+# Build and publish (required for in-app auto-updates)
+# Requires GH_TOKEN with repo release permissions
+npm run package:publish
 
 # Build for specific OS (must be run on that OS)
 npm run package:win

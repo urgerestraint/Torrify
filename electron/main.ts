@@ -14,6 +14,7 @@ import { buildApplicationMenu } from './menu/builder'
 import { ensureTempDir, cleanupTempFiles, cleanupAllTempFiles } from './utils/temp'
 import { registerAllHandlers } from './ipc'
 import { logger } from './utils/logger'
+import { initAutoUpdater } from './updater'
 
 /** 
  * Content Security Policy (CSP) for production.
@@ -152,6 +153,7 @@ app.whenReady().then(() => {
   
   // Register all IPC message handlers
   registerAllHandlers(() => mainWindow)
+  initAutoUpdater(() => mainWindow)
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
