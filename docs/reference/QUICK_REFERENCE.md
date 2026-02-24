@@ -8,6 +8,7 @@
 | `npm test` | Run tests |
 | `npm run build` | Build production artifacts |
 | `npm run package` | Create installer |
+| `npm run package:publish` | Publish release for auto-update |
 
 ## ⌨️ Shortcuts
 

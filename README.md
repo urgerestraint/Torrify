@@ -116,6 +116,7 @@ Useful commands:
 - `npm test` run test suite
 - `npm run test:coverage` generate coverage report
 - `npm run package` build installer for current OS
+- `npm run package:publish` publish a release for in-app auto-update (requires `GH_TOKEN`)
 - `npm run docs:dev` run docs locally
 
 ## Documentation Map
