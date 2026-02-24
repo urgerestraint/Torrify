@@ -49,6 +49,14 @@
   "build": {
     "appId": "com.torrify.app",
     "productName": "Torrify",
+    "fileAssociations": [
+      {
+        "ext": "torrify",
+        "name": "Torrify Project",
+        "description": "Torrify project file",
+        "role": "Editor"
+      }
+    ],
     "directories": {
       "buildResources": "build",
       "output": "dist-installer"
@@ -85,7 +93,7 @@
           ]
         }
       ],
-      "icon": "build/icon.png"
+      "icon": "build/icon.ico"
     },
     "nsis": {
       "oneClick": false,
