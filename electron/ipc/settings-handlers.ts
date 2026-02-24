@@ -13,10 +13,13 @@ import {
   loadSettings
 } from '../settings'
 import { SETTINGS_FILE } from '../constants'
+import { FETCH_TIMEOUT_MS } from '../constants'
 import { createCappedBuffer } from '../cad/process-utils'
 import { getErrorMessage } from '../utils/error'
 import { logger } from '../utils/logger'
 import type { Settings } from '../settings/types'
+
+const LOCAL_OLLAMA_HOSTS = new Set(['localhost', '127.0.0.1', '::1'])
 
 function normalizeOllamaEndpoint(endpointInput: unknown): { ok: true; endpoint: string } | { ok: false; error: string } {
   if (endpointInput === undefined || endpointInput === null || endpointInput === '') {
@@ -29,6 +32,13 @@ function normalizeOllamaEndpoint(endpointInput: unknown): { ok: true; endpoint: 
     const url = new URL(endpointInput.trim())
     if (url.protocol !== 'http:' && url.protocol !== 'https:') {
       return { ok: false, error: 'Invalid Ollama endpoint protocol' }
+    }
+    const allowRemote = process.env.TORRIFY_ALLOW_REMOTE_OLLAMA === '1'
+    if (!allowRemote && !LOCAL_OLLAMA_HOSTS.has(url.hostname)) {
+      return {
+        ok: false,
+        error: 'Remote Ollama endpoints are blocked by default. Set TORRIFY_ALLOW_REMOTE_OLLAMA=1 to allow.'
+      }
     }
     return { ok: true, endpoint: url.toString().replace(/\/+$/, '') }
   } catch {
@@ -139,7 +149,14 @@ export function registerSettingsHandlers(): void {
         return { success: false, models: [], error: endpointResult.error }
       }
       const ollamaEndpoint = endpointResult.endpoint
-      const response = await fetch(`${ollamaEndpoint}/api/tags`)
+      const controller = new AbortController()
+      const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS)
+      let response: Response
+      try {
+        response = await fetch(`${ollamaEndpoint}/api/tags`, { signal: controller.signal })
+      } finally {
+        clearTimeout(timeout)
+      }
 
       if (!response.ok) {
         throw new Error(`Ollama API returned ${response.status}`)

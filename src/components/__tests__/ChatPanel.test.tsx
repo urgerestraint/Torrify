@@ -25,6 +25,11 @@ const defaultSettings = {
 } satisfies Settings
 
 const flushPromises = () => new Promise((resolve) => setTimeout(resolve, 0))
+const settleUi = async () => {
+  await act(async () => {
+    await flushPromises()
+  })
+}
 
 const defaultMessages: Message[] = [
   {
@@ -49,9 +54,7 @@ async function renderChatPanel() {
   await waitFor(() => {
     expect(screen.queryByText('Loading...')).not.toBeInTheDocument()
   })
-  await act(async () => {
-    await flushPromises()
-  })
+  await settleUi()
   return utils
 }
 
@@ -119,6 +122,7 @@ describe('ChatPanel', () => {
     
     fireEvent.change(input, { target: { value: 'Test with Enter' } })
     fireEvent.keyDown(input, { key: 'Enter', code: 'Enter' })
+    await settleUi()
     
     // User message should appear
     expect(screen.getByText('Test with Enter')).toBeInTheDocument()
@@ -159,8 +163,10 @@ describe('ChatPanel', () => {
   it('streams responses when provider supports streaming', async () => {
     const user = userEvent.setup()
     const streamMessage = vi.fn(async (_messages, onChunk) => {
-      onChunk('Hello', 'Hello', false)
-      onChunk(' world', 'Hello world', true)
+      await act(async () => {
+        onChunk('Hello', 'Hello', false)
+        onChunk(' world', 'Hello world', true)
+      })
       return { abort: vi.fn() }
     })
 
@@ -176,7 +182,10 @@ describe('ChatPanel', () => {
     const input = screen.getByPlaceholderText('Type a message...')
     const sendButton = screen.getByRole('button', { name: /send/i })
     fireEvent.change(input, { target: { value: 'Stream this' } })
-    await user.click(sendButton)
+    await act(async () => {
+      await user.click(sendButton)
+      await flushPromises()
+    })
 
     await waitFor(() => {
       expect(screen.getByText('Hello world')).toBeInTheDocument()
@@ -192,7 +201,10 @@ describe('ChatPanel', () => {
     const fileInput = container.querySelector('input[type="file"]') as HTMLInputElement
     const file = new File(['test-image'], 'test.png', { type: 'image/png' })
 
-    await user.upload(fileInput, file)
+    await act(async () => {
+      await user.upload(fileInput, file)
+      await flushPromises()
+    })
     await waitFor(() => {
       expect(screen.getByAltText('Staged 1')).toBeInTheDocument()
     })
@@ -200,7 +212,10 @@ describe('ChatPanel', () => {
     const input = screen.getByPlaceholderText('Type a message...')
     const sendButton = screen.getByRole('button', { name: /send/i })
     fireEvent.change(input, { target: { value: 'Here is an image' } })
-    await user.click(sendButton)
+    await act(async () => {
+      await user.click(sendButton)
+      await flushPromises()
+    })
 
     await waitFor(() => {
       expect(screen.getByAltText('Attached 1')).toBeInTheDocument()

@@ -1,7 +1,14 @@
 import { describe, it, expect, vi } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import SettingsModal from '../SettingsModal'
+
+const flushPromises = () => new Promise((resolve) => setTimeout(resolve, 0))
+const settleUi = async () => {
+  await act(async () => {
+    await flushPromises()
+  })
+}
 
 describe('SettingsModal', () => {
   const mockOnClose = vi.fn()
@@ -22,6 +29,7 @@ describe('SettingsModal', () => {
       expect(screen.getByText('Settings')).toBeInTheDocument()
     })
     expect(screen.getByText('OpenSCAD Executable Path')).toBeInTheDocument()
+    await settleUi()
   })
 
   it('loads settings on open', async () => {
@@ -32,10 +40,10 @@ describe('SettingsModal', () => {
     await waitFor(() => {
       expect(window.electronAPI.getSettings).toHaveBeenCalled()
     })
+    await settleUi()
   })
 
   it('allows user to change OpenSCAD path', async () => {
-    const user = userEvent.setup()
     render(
       <SettingsModal isOpen={true} onClose={mockOnClose} />
     )
@@ -45,14 +53,13 @@ describe('SettingsModal', () => {
     })
 
     const input = screen.getByRole('textbox')
-    await user.clear(input)
-    await user.type(input, 'C:\\Custom\\Path\\openscad.exe')
+    fireEvent.change(input, { target: { value: 'C:\\Custom\\Path\\openscad.exe' } })
     
     expect(input).toHaveValue('C:\\Custom\\Path\\openscad.exe')
+    await settleUi()
   })
 
   it('validates path when changed', async () => {
-    const user = userEvent.setup()
     render(
       <SettingsModal isOpen={true} onClose={mockOnClose} />
     )
@@ -62,12 +69,12 @@ describe('SettingsModal', () => {
     })
 
     const input = screen.getByRole('textbox')
-    await user.clear(input)
-    await user.type(input, 'C:\\Test\\openscad.exe')
+    fireEvent.change(input, { target: { value: 'C:\\Test\\openscad.exe' } })
     
     await waitFor(() => {
       expect(window.electronAPI.checkOpenscadPath).toHaveBeenCalledWith('C:\\Test\\openscad.exe')
     })
+    await settleUi()
   })
 
   it('calls onClose when cancel button is clicked', async () => {
@@ -84,6 +91,7 @@ describe('SettingsModal', () => {
     await user.click(cancelButton)
     
     expect(mockOnClose).toHaveBeenCalled()
+    await settleUi()
   })
 
   it('saves settings when save button is clicked', async () => {
@@ -93,15 +101,24 @@ describe('SettingsModal', () => {
     )
     
     await waitFor(() => {
+      expect(window.electronAPI.getSettings).toHaveBeenCalled()
       expect(screen.getByText('Save')).toBeInTheDocument()
     })
+    await settleUi()
 
     const saveButton = screen.getByText('Save')
-    await user.click(saveButton)
+    await act(async () => {
+      await user.click(saveButton)
+      await flushPromises()
+    })
     
     await waitFor(() => {
       expect(window.electronAPI.saveSettings).toHaveBeenCalled()
     })
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 1100))
+    })
+    await settleUi()
   })
 
   it('switches to AI Configuration tab', async () => {
@@ -109,12 +126,20 @@ describe('SettingsModal', () => {
     render(
       <SettingsModal isOpen={true} onClose={mockOnClose} />
     )
-    await waitFor(() => expect(screen.getByText('Settings')).toBeInTheDocument())
+    await waitFor(() => {
+      expect(window.electronAPI.getSettings).toHaveBeenCalled()
+      expect(screen.getByText('Settings')).toBeInTheDocument()
+    })
+    await settleUi()
     const aiTab = screen.getByText('AI Configuration')
-    await user.click(aiTab)
+    await act(async () => {
+      await user.click(aiTab)
+      await flushPromises()
+    })
     await waitFor(() => {
       expect(screen.getByText('AI Configuration')).toBeInTheDocument()
     })
+    await settleUi()
   })
 
   it('switches to Knowledge Base tab', async () => {
@@ -122,11 +147,19 @@ describe('SettingsModal', () => {
     render(
       <SettingsModal isOpen={true} onClose={mockOnClose} />
     )
-    await waitFor(() => expect(screen.getByText('Settings')).toBeInTheDocument())
+    await waitFor(() => {
+      expect(window.electronAPI.getSettings).toHaveBeenCalled()
+      expect(screen.getByText('Settings')).toBeInTheDocument()
+    })
+    await settleUi()
     const knowledgeTab = screen.getByText('Knowledge Base')
-    await user.click(knowledgeTab)
+    await act(async () => {
+      await user.click(knowledgeTab)
+      await flushPromises()
+    })
     await waitFor(() => {
       expect(screen.getByText('AI Knowledge Base')).toBeInTheDocument()
     })
+    await settleUi()
   })
 })

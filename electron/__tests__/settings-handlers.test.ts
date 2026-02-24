@@ -1,15 +1,16 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import * as fs from 'fs'
 import { registerSettingsHandlers } from '../ipc/settings-handlers'
 import type { Settings } from '../settings/types'
 
-const { handlers, mockGetCurrentSettings, mockSetCurrentSettings, mockSaveSettings, mockLoadSettings } =
+const { handlers, mockGetCurrentSettings, mockSetCurrentSettings, mockSaveSettings, mockLoadSettings, mockFetch } =
   vi.hoisted(() => ({
     handlers: {} as Record<string, (...args: unknown[]) => unknown>,
     mockGetCurrentSettings: vi.fn(),
     mockSetCurrentSettings: vi.fn(),
     mockSaveSettings: vi.fn(),
-    mockLoadSettings: vi.fn()
+    mockLoadSettings: vi.fn(),
+    mockFetch: vi.fn()
   }))
 
 const defaultSettings: Settings = {
@@ -58,9 +59,20 @@ vi.mock('../utils/logger', () => ({ logger: { error: vi.fn(), debug: vi.fn() } }
 beforeEach(() => {
   mockGetCurrentSettings.mockReturnValue(defaultSettings)
   mockLoadSettings.mockReturnValue(defaultSettings)
+  mockFetch.mockReset()
+  mockFetch.mockResolvedValue({
+    ok: true,
+    json: async () => ({ models: [] })
+  })
+  vi.stubGlobal('fetch', mockFetch)
+  delete process.env.TORRIFY_ALLOW_REMOTE_OLLAMA
   vi.mocked(fs.existsSync).mockReturnValue(true)
   vi.mocked(fs.unlinkSync).mockImplementation(() => {})
   registerSettingsHandlers()
+})
+
+afterEach(() => {
+  vi.unstubAllGlobals()
 })
 
 describe('settings-handlers', () => {
@@ -135,6 +147,36 @@ describe('settings-handlers', () => {
       registerSettingsHandlers()
       const result = (handlers['should-show-welcome'] as (...a: unknown[]) => unknown)(null)
       expect(typeof result).toBe('boolean')
+    })
+  })
+
+  describe('get-ollama-models', () => {
+    it('rejects remote endpoints by default', async () => {
+      const result = await (handlers['get-ollama-models'] as (...a: unknown[]) => Promise<unknown>)(
+        null,
+        'https://example.com:11434'
+      )
+      expect(result).toEqual({
+        success: false,
+        models: [],
+        error: 'Remote Ollama endpoints are blocked by default. Set TORRIFY_ALLOW_REMOTE_OLLAMA=1 to allow.'
+      })
+      expect(mockFetch).not.toHaveBeenCalled()
+    })
+
+    it('allows remote endpoints when explicitly enabled', async () => {
+      process.env.TORRIFY_ALLOW_REMOTE_OLLAMA = '1'
+      registerSettingsHandlers()
+
+      await (handlers['get-ollama-models'] as (...a: unknown[]) => Promise<unknown>)(
+        null,
+        'https://example.com:11434'
+      )
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        'https://example.com:11434/api/tags',
+        expect.objectContaining({ signal: expect.any(AbortSignal) })
+      )
     })
   })
 })

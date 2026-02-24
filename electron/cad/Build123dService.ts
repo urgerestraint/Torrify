@@ -8,6 +8,8 @@ import type { CADService, CADRenderResult, CADValidationResult } from './types'
 import { createCappedBuffer } from './process-utils'
 import { logger } from '../utils/logger'
 import { MAX_OUTPUT_FILE_SIZE } from '../constants'
+import { generateBuild123dWrapperScript } from './build123d-wrapper'
+import { deriveBuild123dRenderError } from './build123d-errors'
 
 // Constants
 const TIMEOUT_MS = 60000 // 60 seconds (Python can be slower)
@@ -30,94 +32,6 @@ export class Build123dService implements CADService {
     logger.debug('[Build123dService] Initialized with Python path:', this.pythonPath)
   }
 
-  /**
-   * Generate a wrapper script that executes user code and exports to STL
-   */
-  private generateWrapperScript(userCode: string, outputPath: string): string {
-    // Escape the output path for Python
-    const escapedOutputPath = outputPath.replace(/\\/g, '\\\\')
-    
-    // Ensure user code is not empty (would cause IndentationError)
-    const safeUserCode = userCode.trim() || 'pass  # Empty user code'
-    
-    return `# Auto-generated wrapper script for build123d
-import sys
-import traceback
-
-# Verify build123d is available and import export_stl for wrapper use
-try:
-    import build123d as _b123d_module
-    from build123d import export_stl as _wrapper_export_stl
-except ImportError as e:
-    print("BUILD123D_NOT_INSTALLED", file=sys.stderr)
-    sys.exit(1)
-
-# Execute user code in its own namespace
-_user_globals = {'__name__': '__main__', '__builtins__': __builtins__}
-_user_code = '''
-${safeUserCode.replace(/\\/g, '\\\\').replace(/'/g, "\\'")}
-'''
-
-try:
-    exec(_user_code, _user_globals)
-except Exception as e:
-    print(f"ERROR in user code: {e}", file=sys.stderr)
-    traceback.print_exc(file=sys.stderr)
-    sys.exit(1)
-
-# Find and export geometry from user code namespace
-def _get_exportable(obj):
-    """Extract exportable geometry from an object"""
-    if obj is None:
-        return None
-    # If it's a BuildPart context, get the .part property
-    if hasattr(obj, 'part'):
-        part_attr = getattr(obj, 'part')
-        # .part is a property, just access it
-        if hasattr(part_attr, 'wrapped'):
-            return part_attr
-        return None
-    # If it already has .wrapped, it's exportable
-    if hasattr(obj, 'wrapped'):
-        return obj
-    return None
-
-try:
-    _export_result = None
-    
-    # First, check for common variable names in user namespace
-    for var_name in ['result', 'part', 'model', 'obj', 'shape', 'solid', 'box', 'cylinder', 'sphere']:
-        if var_name in _user_globals:
-            candidate = _user_globals[var_name]
-            _export_result = _get_exportable(candidate)
-            if _export_result is not None:
-                break
-    
-    # If nothing found, search all user variables
-    if _export_result is None:
-        for name, obj in _user_globals.items():
-            if name.startswith('_'):
-                continue
-            _export_result = _get_exportable(obj)
-            if _export_result is not None:
-                break
-    
-    if _export_result is None:
-        print("ERROR: No exportable geometry found. Make sure your code creates a 3D object.", file=sys.stderr)
-        print("Tip: Assign your geometry to a variable like 'result', 'part', or 'model'.", file=sys.stderr)
-        sys.exit(1)
-    
-    # Export to STL using the wrapper's import
-    _wrapper_export_stl(_export_result, "${escapedOutputPath}")
-    print(f"Successfully exported to ${escapedOutputPath}")
-    
-except Exception as e:
-    print(f"ERROR during export: {e}", file=sys.stderr)
-    traceback.print_exc(file=sys.stderr)
-    sys.exit(1)
-`
-  }
-
   async renderStl(code: string): Promise<CADRenderResult> {
     return new Promise((resolve) => {
       let timeoutId: NodeJS.Timeout | null = null
@@ -127,7 +41,7 @@ except Exception as e:
         logger.debug('[Build123dService] renderStl called with pythonPath:', this.pythonPath)
 
         // Generate wrapper script
-        const wrapperScript = this.generateWrapperScript(code, STL_OUTPUT)
+        const wrapperScript = generateBuild123dWrapperScript(code, STL_OUTPUT)
 
         // Write script to temporary file
         fs.writeFileSync(TEMP_PY_FILE, wrapperScript, 'utf-8')
@@ -199,20 +113,7 @@ except Exception as e:
             // Parse error message for better feedback
             const stderrRaw = stderrBuf.rawValue
             const stdoutRaw = stdoutBuf.rawValue
-            let errorMessage = stderrRaw || stdoutRaw || `Python exited with code ${exitCode}`
-            
-            // Check for common errors - use specific marker to avoid false positives
-            if (stderrRaw.includes('BUILD123D_NOT_INSTALLED')) {
-              errorMessage = 'build123d is not installed. Install it with: pip install build123d'
-            } else if (stderrRaw.includes('No exportable geometry found')) {
-              errorMessage = 'No exportable geometry found. Make sure your code creates a 3D object and assigns it to a variable.'
-            } else if (stderrRaw.includes('ModuleNotFoundError')) {
-              // Extract the module name from the error
-              const match = stderrRaw.match(/No module named '([^']+)'/)
-              if (match) {
-                errorMessage = `Missing Python module: ${match[1]}. Make sure all required packages are installed.`
-              }
-            }
+            const errorMessage = deriveBuild123dRenderError(stderrRaw, stdoutRaw, exitCode)
             
             resolve({
               success: false,
@@ -375,4 +276,3 @@ except ImportError:
     return 'python'
   }
 }
-

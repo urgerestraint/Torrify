@@ -53,11 +53,54 @@ function SettingsModal({ isOpen, onClose, initialTab }: SettingsModalProps) {
   const dialogRef = useRef<HTMLDivElement>(null)
   const previousFocusRef = useRef<HTMLElement | null>(null)
   const closeTimerRef = useRef<number | null>(null)
+  const isMountedRef = useRef(true)
 
   const { ollamaModels, isLoadingOllamaModels, ollamaModelsError, loadOllamaModels } = useOllamaModels(
     settings,
     isOpen,
     setSettings
+  )
+
+  useEffect(() => {
+    return () => {
+      isMountedRef.current = false
+    }
+  }, [])
+
+  const resolvePathValid = useCallback(async (path: string): Promise<boolean | null> => {
+    if (!path) {
+      return null
+    }
+    try {
+      return await window.electronAPI.checkOpenscadPath(path)
+    } catch {
+      return false
+    }
+  }, [])
+
+  const resolvePythonPathValid = useCallback(
+    async (path: string): Promise<{ valid: boolean; version?: string; error?: string } | null> => {
+      if (!path) {
+        return null
+      }
+      try {
+        return await window.electronAPI.checkPythonPath(path)
+      } catch {
+        return { valid: false, error: 'Failed to check Python path' }
+      }
+    },
+    []
+  )
+
+  const resolveBackendValidation = useCallback(
+    async (backend: CADBackend): Promise<{ valid: boolean; version?: string; error?: string }> => {
+      try {
+        return await window.electronAPI.validateCadBackend(backend)
+      } catch {
+        return { valid: false, error: 'Failed to validate backend' }
+      }
+    },
+    []
   )
 
   const loadSettings = useCallback(async () => {
@@ -75,14 +118,22 @@ function SettingsModal({ isOpen, onClose, initialTab }: SettingsModalProps) {
         }
         await window.electronAPI.saveSettings(loadedSettings)
       }
+      const [nextPathValid, nextPythonPathValid, nextBackendValidation] = await Promise.all([
+        resolvePathValid(loadedSettings.openscadPath),
+        resolvePythonPathValid(loadedSettings.build123dPythonPath),
+        resolveBackendValidation(loadedSettings.cadBackend)
+      ])
+      if (!isMountedRef.current) {
+        return
+      }
+      setPathValid(nextPathValid)
+      setPythonPathValid(nextPythonPathValid)
+      setBackendValidation(nextBackendValidation)
       setSettings(loadedSettings)
-      checkPath(loadedSettings.openscadPath)
-      checkPythonPath(loadedSettings.build123dPythonPath)
-      validateBackend(loadedSettings.cadBackend)
     } catch (error) {
       logger.error('Failed to load settings', error)
     }
-  }, [])
+  }, [resolveBackendValidation, resolvePathValid, resolvePythonPathValid])
 
   const loadContextStatus = useCallback(async () => {
     try {
@@ -98,10 +149,15 @@ function SettingsModal({ isOpen, onClose, initialTab }: SettingsModalProps) {
   useEffect(() => {
     if (isOpen) {
       void loadSettings()
-      void loadContextStatus()
       if (initialTab) setActiveTab(initialTab)
     }
-  }, [isOpen, loadSettings, loadContextStatus, initialTab])
+  }, [isOpen, loadSettings, initialTab])
+
+  useEffect(() => {
+    if (isOpen && activeTab === 'knowledge') {
+      void loadContextStatus()
+    }
+  }, [activeTab, isOpen, loadContextStatus])
 
   useEffect(() => {
     if (!isOpen) return
@@ -149,37 +205,23 @@ function SettingsModal({ isOpen, onClose, initialTab }: SettingsModalProps) {
   }, [])
 
   const checkPath = async (path: string) => {
-    if (!path) {
-      setPathValid(null)
-      return
-    }
-    try {
-      const isValid = await window.electronAPI.checkOpenscadPath(path)
-      setPathValid(isValid)
-    } catch {
-      setPathValid(false)
+    const next = await resolvePathValid(path)
+    if (isMountedRef.current) {
+      setPathValid(next)
     }
   }
 
   const checkPythonPath = async (path: string) => {
-    if (!path) {
-      setPythonPathValid(null)
-      return
-    }
-    try {
-      const result = await window.electronAPI.checkPythonPath(path)
-      setPythonPathValid(result)
-    } catch {
-      setPythonPathValid({ valid: false, error: 'Failed to check Python path' })
+    const next = await resolvePythonPathValid(path)
+    if (isMountedRef.current) {
+      setPythonPathValid(next)
     }
   }
 
   const validateBackend = async (backend: CADBackend) => {
-    try {
-      const result = await window.electronAPI.validateCadBackend(backend)
-      setBackendValidation(result)
-    } catch {
-      setBackendValidation({ valid: false, error: 'Failed to validate backend' })
+    const next = await resolveBackendValidation(backend)
+    if (isMountedRef.current) {
+      setBackendValidation(next)
     }
   }
 
