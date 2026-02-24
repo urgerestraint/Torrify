@@ -54,8 +54,7 @@
         "ext": "torrify",
         "name": "Torrify Project",
         "description": "Torrify project file",
-        "role": "Editor",
-        "icon": "build/icon.ico"
+        "role": "Editor"
       }
     ],
     "directories": {
