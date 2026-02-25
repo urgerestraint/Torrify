@@ -40,6 +40,7 @@ If you are new to Torrify, use this order:
 - [Developer Overview](./developer/index.md)
 - [Developer Guide](./developer/README.md)
 - [Testing](./developer/TESTING.md)
+- [Web Deployment](./developer/WEB_DEPLOYMENT.md)
 - [Architecture](./architecture/index.md)
 
 ### Reference

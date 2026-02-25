@@ -33,7 +33,9 @@ npm run test:watch
 |---------|-------------|
 | `npm run electron:dev` | Start app in development mode with hot reload. |
 | `npm run dev` | Start Vite server only (headless, for browser checks). |
+| `npm run dev:web` | Start Vite in managed web runtime mode. |
 | `npm run build` | Build renderer and main process for production. |
+| `npm run build:web` | Build static web bundle to `dist-web` (no Electron runtime plugins). |
 | `npm run package` | Create installer for current OS. |
 | `npm run package:publish` | Build installer and publish release metadata/artifacts for auto-update. |
 | `npm run package:win` | Create Windows installer (requires Developer Mode). |

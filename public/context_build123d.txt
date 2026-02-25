@@ -1,0 +1,111 @@
+```python
+# Section 1: Concepts
+# - Context Managers: Use 'with BuildPart()', 'with BuildSketch()', 'with BuildLine()'.
+# - Algebra: Use '+' (Union), '-' (Difference), '&' (Intersection) for shape operations.
+# - Selectors: Use .sort_by(), .filter_by(), .group_by() instead of list indices.
+
+# Section 2: API Reference
+
+from enum import Enum
+
+class Mode(Enum):
+    ADD = 1
+    SUBTRACT = 2
+    INTERSECT = 3
+    REPLACE = 4
+    PRIVATE = 5
+
+class Align(Enum):
+    MIN = 1
+    CENTER = 2
+    MAX = 3
+    NONE = 4
+
+class Transition(Enum):
+    RIGHT = 1
+    ROUND = 2
+    TRANSFORMED = 3
+
+class Side(Enum):
+    LEFT = 1
+    RIGHT = 2
+    BOTH = 3
+
+class Kind(Enum):
+    ARC = 1
+    INTERSECTION = 2
+    TANGENT = 3
+
+# Builders
+BuildPart(*workplanes, mode=Mode.ADD)
+BuildSketch(*workplanes, mode=Mode.ADD)
+BuildLine(workplane=Plane.XY, mode=Mode.ADD)
+
+# 3D Objects (BuildPart)
+Box(length, width, height, rotation=(0,0,0), align=(Align.CENTER, Align.CENTER, Align.CENTER), mode=Mode.ADD)
+Cylinder(radius, height, arc_size=360, rotation=(0,0,0), align=(Align.CENTER, Align.CENTER, Align.CENTER), mode=Mode.ADD)
+Sphere(radius, arc_size1=-90, arc_size2=90, arc_size3=360, rotation=(0,0,0), align=(Align.CENTER, Align.CENTER, Align.CENTER), mode=Mode.ADD)
+Cone(bottom_radius, top_radius, height, arc_size=360, rotation=(0,0,0), align=(Align.CENTER, Align.CENTER, Align.CENTER), mode=Mode.ADD)
+Torus(major_radius, minor_radius, rotation=(0,0,0), align=(Align.CENTER, Align.CENTER, Align.CENTER), mode=Mode.ADD)
+
+# 2D Objects (BuildSketch)
+Rectangle(width, height, rotation=0, align=(Align.CENTER, Align.CENTER), mode=Mode.ADD)
+Circle(radius, align=(Align.CENTER, Align.CENTER), mode=Mode.ADD)
+Ellipse(x_radius, y_radius, rotation=0, align=(Align.CENTER, Align.CENTER), mode=Mode.ADD)
+Polygon(*pts, rotation=0, align=(Align.CENTER, Align.CENTER), mode=Mode.ADD)
+RegularPolygon(radius, side_count, rotation=0, align=(Align.CENTER, Align.CENTER), mode=Mode.ADD)
+SlotOverall(width, height, rotation=0, align=(Align.CENTER, Align.CENTER), mode=Mode.ADD)
+Text(txt, font_size, font='Arial', text_align=(Align.CENTER, Align.CENTER), align=None, mode=Mode.ADD)
+
+# 1D Objects (BuildLine)
+Line(*pts, mode=Mode.ADD)
+Polyline(*pts, close=False, mode=Mode.ADD)
+Spline(*pts, tangents=None, periodic=False, mode=Mode.ADD)
+ThreePointArc(*pts, mode=Mode.ADD)
+TangentArc(*pts, tangent, mode=Mode.ADD)
+RadiusArc(start_point, end_point, radius, mode=Mode.ADD)
+
+# Operations
+extrude(to_extrude=None, amount=None, dir=None, until=None, both=False, taper=0.0, mode=Mode.ADD)
+revolve(profiles=None, axis=((0,0,0),(0,0,1)), revolution_arc=360.0, mode=Mode.ADD)
+loft(sections=None, ruled=False, mode=Mode.ADD)
+sweep(sections=None, path=None, transition=Transition.TRANSFORMED, mode=Mode.ADD)
+fillet(objects, radius)
+chamfer(objects, length, length2=None, angle=None)
+offset(objects=None, amount=0, kind=Kind.ARC, side=Side.BOTH, mode=Mode.REPLACE)
+shell(objects=None, amount=0, openings=None, mode=Mode.REPLACE)
+split(objects=None, bisect_by=Plane.XY, keep=Keep.TOP, mode=Mode.REPLACE)
+mirror(objects=None, about=Plane.XY, mode=Mode.ADD)
+scale(objects=None, by=1, mode=Mode.REPLACE)
+
+# Location Helpers
+Locations(*pts)
+GridLocations(x_spacing, y_spacing, x_count, y_count, align=(Align.CENTER, Align.CENTER))
+PolarLocations(radius, count, start_angle=0.0, angular_range=360.0, rotate=True)
+HexLocations(radius, x_count, y_count, align=(Align.CENTER, Align.CENTER))
+
+# Section 3: Patterns (The Grammar)
+
+# WARNING: NEVER use list indices like faces()[0]. 
+# ALWAYS use .sort_by() or .filter_by() for robust code.
+
+# Pattern: Nested Builder with Selector
+with BuildPart() as p:
+    Box(10, 10, 10)
+    # Select the top face (highest Z) to sketch on
+    with BuildSketch(p.faces().sort_by(Axis.Z).last):
+        Circle(3)
+    extrude(amount=-2, mode=Mode.SUBTRACT)
+
+# Pattern: Selector Grammar
+top_face = p.faces().sort_by(Axis.Z).last
+vertical_edges = p.edges().filter_by(Axis.Z)
+large_faces = p.faces().filter_by(lambda f: f.area > 5.0)
+fillet(p.edges().sort_by(Axis.Z).last, radius=1)
+
+# Pattern: Multiple Locations
+with BuildPart() as p:
+    Box(20, 20, 2)
+    with Locations((5, 5), (-5, -5)):
+        Cylinder(radius=2, height=5)
+```

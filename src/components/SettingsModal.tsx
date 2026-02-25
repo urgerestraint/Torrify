@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import type { KeyboardEvent as ReactKeyboardEvent } from 'react'
 import { requiresApiKey, DEFAULT_MODELS } from '../services/llm'
 import type { CADBackend } from '../services/cad'
+import { isWebRuntime } from '../platform/runtime'
 import { logger } from '../utils/logger'
 import {
   GeneralSettings,
@@ -25,8 +26,11 @@ const CONTEXT_URLS = {
 }
 
 const TAB_ORDER: SettingsTab[] = ['general', 'ai', 'knowledge']
+const WEB_TAB_ORDER: SettingsTab[] = ['ai']
 
 function SettingsModal({ isOpen, onClose, initialTab }: SettingsModalProps) {
+  const managedWebMode = isWebRuntime()
+  const availableTabs: SettingsTab[] = managedWebMode ? WEB_TAB_ORDER : TAB_ORDER
   const [settings, setSettings] = useState<Settings | null>(null)
   const [pathValid, setPathValid] = useState<boolean | null>(null)
   const [pythonPathValid, setPythonPathValid] = useState<{
@@ -41,7 +45,7 @@ function SettingsModal({ isOpen, onClose, initialTab }: SettingsModalProps) {
   } | null>(null)
   const [isSaving, setIsSaving] = useState(false)
   const [saveMessage, setSaveMessage] = useState<string | null>(null)
-  const [activeTab, setActiveTab] = useState<SettingsTab>('general')
+  const [activeTab, setActiveTab] = useState<SettingsTab>(managedWebMode ? 'ai' : 'general')
   const [openRouterKeySet, setOpenRouterKeySet] = useState<boolean | null>(null)
   const [contextStatus, setContextStatus] = useState<{
     openscad?: { user: { exists: boolean; size: number; modified: string | null }; bundled: { exists: boolean; size: number; modified: string | null }; active: 'user' | 'bundled' }
@@ -106,6 +110,19 @@ function SettingsModal({ isOpen, onClose, initialTab }: SettingsModalProps) {
   const loadSettings = useCallback(async () => {
     try {
       let loadedSettings = await window.electronAPI.getSettings()
+      if (managedWebMode) {
+        loadedSettings = {
+          ...loadedSettings,
+          cadBackend: 'openscad',
+          llm: {
+            ...loadedSettings.llm,
+            provider: 'gateway',
+            apiKey: '',
+            enabled: loadedSettings.llm.enabled !== false,
+            model: loadedSettings.llm.model || DEFAULT_MODELS.gateway
+          }
+        }
+      }
       // Migrate deprecated anthropic provider to gemini (not implemented, no API key)
       if (loadedSettings.llm.provider === 'anthropic') {
         loadedSettings = {
@@ -118,11 +135,13 @@ function SettingsModal({ isOpen, onClose, initialTab }: SettingsModalProps) {
         }
         await window.electronAPI.saveSettings(loadedSettings)
       }
-      const [nextPathValid, nextPythonPathValid, nextBackendValidation] = await Promise.all([
-        resolvePathValid(loadedSettings.openscadPath),
-        resolvePythonPathValid(loadedSettings.build123dPythonPath),
-        resolveBackendValidation(loadedSettings.cadBackend)
-      ])
+      const [nextPathValid, nextPythonPathValid, nextBackendValidation] = managedWebMode
+        ? [true, null, { valid: true, version: 'OpenSCAD Web Runtime' }]
+        : await Promise.all([
+            resolvePathValid(loadedSettings.openscadPath),
+            resolvePythonPathValid(loadedSettings.build123dPythonPath),
+            resolveBackendValidation(loadedSettings.cadBackend)
+          ])
       if (!isMountedRef.current) {
         return
       }
@@ -133,7 +152,7 @@ function SettingsModal({ isOpen, onClose, initialTab }: SettingsModalProps) {
     } catch (error) {
       logger.error('Failed to load settings', error)
     }
-  }, [resolveBackendValidation, resolvePathValid, resolvePythonPathValid])
+  }, [managedWebMode, resolveBackendValidation, resolvePathValid, resolvePythonPathValid])
 
   const loadContextStatus = useCallback(async () => {
     try {
@@ -149,9 +168,13 @@ function SettingsModal({ isOpen, onClose, initialTab }: SettingsModalProps) {
   useEffect(() => {
     if (isOpen) {
       void loadSettings()
-      if (initialTab) setActiveTab(initialTab)
+      if (initialTab && availableTabs.includes(initialTab)) {
+        setActiveTab(initialTab)
+      } else if (!availableTabs.includes(activeTab)) {
+        setActiveTab(availableTabs[0])
+      }
     }
-  }, [isOpen, loadSettings, initialTab])
+  }, [activeTab, availableTabs, initialTab, isOpen, loadSettings])
 
   useEffect(() => {
     if (isOpen && activeTab === 'knowledge') {
@@ -289,6 +312,18 @@ function SettingsModal({ isOpen, onClose, initialTab }: SettingsModalProps) {
 
   const handleAccessModeChange = (mode: 'byok' | 'pro') => {
     if (!settings) return
+    if (managedWebMode) {
+      setSettings({
+        ...settings,
+        llm: {
+          ...settings.llm,
+          provider: 'gateway',
+          model: settings.llm.model || DEFAULT_MODELS.gateway,
+          apiKey: ''
+        }
+      })
+      return
+    }
     if (mode === 'pro') {
       setSettings({
         ...settings,
@@ -349,7 +384,7 @@ function SettingsModal({ isOpen, onClose, initialTab }: SettingsModalProps) {
     if (!settings) return
     if (settings.llm.enabled) {
       if (settings.llm.provider === 'gateway') {
-        if (!settings.llm.gatewayLicenseKey?.trim()) {
+        if (!managedWebMode && !settings.llm.gatewayLicenseKey?.trim()) {
           setSaveMessage('PRO license key is required')
           return
         }
@@ -364,10 +399,23 @@ function SettingsModal({ isOpen, onClose, initialTab }: SettingsModalProps) {
         return
       }
     }
+    const normalizedSettings = managedWebMode
+      ? {
+          ...settings,
+          cadBackend: 'openscad' as const,
+          llm: {
+            ...settings.llm,
+            provider: 'gateway' as const,
+            apiKey: '',
+            model: settings.llm.model || DEFAULT_MODELS.gateway
+          }
+        }
+      : settings
+
     setIsSaving(true)
     setSaveMessage(null)
     try {
-      await window.electronAPI.saveSettings(settings)
+      await window.electronAPI.saveSettings(normalizedSettings)
       setSaveMessage('Settings saved successfully!')
       closeTimerRef.current = window.setTimeout(() => {
         onClose()
@@ -381,14 +429,14 @@ function SettingsModal({ isOpen, onClose, initialTab }: SettingsModalProps) {
   }
 
   const handleTabKeyDown = (event: ReactKeyboardEvent<HTMLButtonElement>, tabKey: SettingsTab) => {
-    const currentIndex = TAB_ORDER.indexOf(tabKey)
+    const currentIndex = availableTabs.indexOf(tabKey)
     if (currentIndex === -1) return
     if (event.key === 'ArrowRight') {
       event.preventDefault()
-      setActiveTab(TAB_ORDER[(currentIndex + 1) % TAB_ORDER.length])
+      setActiveTab(availableTabs[(currentIndex + 1) % availableTabs.length])
     } else if (event.key === 'ArrowLeft') {
       event.preventDefault()
-      setActiveTab(TAB_ORDER[(currentIndex - 1 + TAB_ORDER.length) % TAB_ORDER.length])
+      setActiveTab(availableTabs[(currentIndex - 1 + availableTabs.length) % availableTabs.length])
     }
   }
 
@@ -433,7 +481,7 @@ function SettingsModal({ isOpen, onClose, initialTab }: SettingsModalProps) {
         </div>
 
         <div className="flex border-b border-[#3e3e42]" role="tablist" aria-label="Settings tabs">
-          {TAB_ORDER.map((tab) => (
+          {availableTabs.map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
@@ -468,6 +516,7 @@ function SettingsModal({ isOpen, onClose, initialTab }: SettingsModalProps) {
           {activeTab === 'ai' && (
             <AISettings
               settings={settings}
+              managedGatewayMode={managedWebMode}
               openRouterKeySet={openRouterKeySet}
               ollamaModels={ollamaModels}
               isLoadingOllamaModels={isLoadingOllamaModels}
@@ -508,7 +557,7 @@ function SettingsModal({ isOpen, onClose, initialTab }: SettingsModalProps) {
           </button>
           <button
             onClick={handleSave}
-            disabled={isSaving || (settings.cadBackend === 'openscad' && pathValid === false)}
+            disabled={isSaving || (!managedWebMode && settings.cadBackend === 'openscad' && pathValid === false)}
             className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed rounded font-medium transition-colors"
           >
             {isSaving ? 'Saving...' : 'Save'}
