@@ -11,6 +11,21 @@ export function ensureTempDir(): void {
   }
 }
 
+export function createRequestTempDir(prefix: string): string {
+  ensureTempDir()
+  return fs.mkdtempSync(path.join(TEMP_DIR, `${prefix}-`))
+}
+
+export function cleanupTempPath(targetPath: string): void {
+  try {
+    if (fs.existsSync(targetPath)) {
+      fs.rmSync(targetPath, { recursive: true, force: true })
+    }
+  } catch (error) {
+    logger.error('Failed to cleanup temp path', { targetPath, error })
+  }
+}
+
 /**
  * Cleans up temporary files in the temp directory.
  * @param maxAgeMs - Maximum age of files to keep (default: 1 hour)

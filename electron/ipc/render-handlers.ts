@@ -8,6 +8,7 @@ import { TEMP_DIR, OPENSCAD_RENDER_CONFIG, OPENSCAD_TIMEOUT_MS, MAX_OUTPUT_FILE_
 import { createCappedBuffer } from '../cad/process-utils'
 import { getErrorMessage } from '../utils/error'
 import { logger } from '../utils/logger'
+import { cleanupTempPath, createRequestTempDir } from '../utils/temp'
 
 export function registerRenderHandlers(): void {
   ipcMain.handle('render-scad', async (_event, codeInput: unknown) => {
@@ -23,30 +24,50 @@ export function registerRenderHandlers(): void {
     }
 
     const { spawn } = await import('child_process')
-    const TEMP_SCAD_FILE = path.join(TEMP_DIR, 'temp_model.scad')
-    const RENDER_OUTPUT = path.join(TEMP_DIR, 'render_preview.png')
+    const requestTempDir = createRequestTempDir('render-scad')
+    const tempScadFile = path.join(requestTempDir, 'temp_model.scad')
+    const renderOutput = path.join(requestTempDir, 'render_preview.png')
 
     return new Promise((resolve, reject) => {
       let timeoutId: NodeJS.Timeout | null = null
       let openscadProcess: ReturnType<typeof spawn> | null = null
+      let settled = false
+
+      const rejectOnce = (error: Error): void => {
+        if (settled) {
+          return
+        }
+        settled = true
+        cleanupTempPath(requestTempDir)
+        reject(error)
+      }
+
+      const resolveOnce = (result: unknown): void => {
+        if (settled) {
+          return
+        }
+        settled = true
+        cleanupTempPath(requestTempDir)
+        resolve(result)
+      }
 
       try {
-        fs.writeFileSync(TEMP_SCAD_FILE, code, 'utf-8')
+        fs.writeFileSync(tempScadFile, code, 'utf-8')
 
         const args = [
           '-o',
-          RENDER_OUTPUT,
+          renderOutput,
           `--colorscheme=${OPENSCAD_RENDER_CONFIG.colorscheme}`,
           `--camera=${OPENSCAD_RENDER_CONFIG.camera}`,
           `--imgsize=${OPENSCAD_RENDER_CONFIG.imgsize}`,
           `--projection=${OPENSCAD_RENDER_CONFIG.projection}`,
-          TEMP_SCAD_FILE
+          tempScadFile
         ]
 
         logger.debug('Executing OpenSCAD PNG render')
 
         if (!fs.existsSync(currentSettings.openscadPath)) {
-          reject(new Error(`OpenSCAD executable not found at: ${currentSettings.openscadPath}`))
+          rejectOnce(new Error(`OpenSCAD executable not found at: ${currentSettings.openscadPath}`))
           return
         }
 
@@ -57,7 +78,7 @@ export function registerRenderHandlers(): void {
         timeoutId = setTimeout(() => {
           if (openscadProcess && !openscadProcess.killed) {
             openscadProcess.kill()
-            reject(new Error('OpenSCAD execution timed out after 30 seconds'))
+            rejectOnce(new Error('OpenSCAD execution timed out after 30 seconds'))
           }
         }, OPENSCAD_TIMEOUT_MS)
 
@@ -70,10 +91,10 @@ export function registerRenderHandlers(): void {
           if (timeoutId) clearTimeout(timeoutId)
 
           if (exitCode === 0) {
-            if (fs.existsSync(RENDER_OUTPUT)) {
-              const stats = fs.statSync(RENDER_OUTPUT)
+            if (fs.existsSync(renderOutput)) {
+              const stats = fs.statSync(renderOutput)
               if (stats.size > MAX_OUTPUT_FILE_SIZE) {
-                reject(
+                rejectOnce(
                   new Error(
                     `Output file too large: ${(stats.size / 1024 / 1024).toFixed(2)}MB (max ${MAX_OUTPUT_FILE_SIZE / 1024 / 1024}MB)`
                   )
@@ -81,31 +102,31 @@ export function registerRenderHandlers(): void {
                 return
               }
 
-              const imageData = fs.readFileSync(RENDER_OUTPUT)
+              const imageData = fs.readFileSync(renderOutput)
               const base64Image = imageData.toString('base64')
-              resolve({
+              resolveOnce({
                 success: true,
                 image: `data:image/png;base64,${base64Image}`,
                 timestamp: Date.now()
               })
             } else {
-              reject(new Error('Render output file not created'))
+              rejectOnce(new Error('Render output file not created'))
             }
           } else {
-            reject(new Error(`OpenSCAD exited with code ${exitCode}: ${stderrBuf.value}`))
+            rejectOnce(new Error(`OpenSCAD exited with code ${exitCode}: ${stderrBuf.value}`))
           }
         })
 
         openscadProcess.on('error', (error) => {
           if (timeoutId) clearTimeout(timeoutId)
-          reject(new Error(`Failed to start OpenSCAD: ${error.message}`))
+          rejectOnce(new Error(`Failed to start OpenSCAD: ${error.message}`))
         })
       } catch (error) {
         if (timeoutId) clearTimeout(timeoutId)
         if (openscadProcess && !openscadProcess.killed) {
           openscadProcess.kill()
         }
-        reject(new Error(`Render error: ${getErrorMessage(error)}`))
+        rejectOnce(new Error(`Render error: ${getErrorMessage(error)}`))
       }
     })
   })
@@ -127,7 +148,7 @@ export function registerRenderHandlers(): void {
         build123dPythonPath: currentSettings.build123dPythonPath
       })
 
-      const result = await cadService.renderStl(code)
+      const result = await cadService.renderStl(code, `render-stl-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`)
 
       if (result.success) {
         return result

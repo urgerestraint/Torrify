@@ -7,27 +7,13 @@
 import { spawn } from 'child_process'
 import * as fs from 'fs'
 import * as path from 'path'
-import * as os from 'os'
 import type { CADService, CADRenderResult, CADValidationResult } from './types'
 import { createCappedBuffer } from './process-utils'
 import { MAX_OUTPUT_FILE_SIZE } from '../constants'
+import { cleanupTempPath, createRequestTempDir } from '../utils/temp'
 
 /** Execution timeout for the OpenSCAD process (30 seconds) */
 const RENDER_TIMEOUT_MS = 30000
-
-/** Root directory for temporary CAD assets */
-const TORRIFY_TEMP_DIR = path.join(os.tmpdir(), 'torrify')
-
-/** Path to the temporary source file passed to OpenSCAD */
-const TEMP_SCAD_SOURCE = path.join(TORRIFY_TEMP_DIR, 'temp_model.scad')
-
-/** Path where OpenSCAD will write the rendered STL */
-const TEMP_STL_OUTPUT = path.join(TORRIFY_TEMP_DIR, 'render_preview.stl')
-
-// Ensure infrastructure exists on module load
-if (!fs.existsSync(TORRIFY_TEMP_DIR)) {
-  fs.mkdirSync(TORRIFY_TEMP_DIR, { recursive: true })
-}
 
 /**
  * Service class for interacting with the OpenSCAD CLI.
@@ -48,20 +34,33 @@ export class OpenSCADService implements CADService {
    * @param code - Valid OpenSCAD script
    * @returns Promise resolving to the render result or error details
    */
-  async renderStl(code: string): Promise<CADRenderResult> {
+  async renderStl(code: string, requestId?: string): Promise<CADRenderResult> {
     return new Promise((resolve) => {
       let timeoutId: NodeJS.Timeout | null = null
       let openscadProcess: ReturnType<typeof spawn> | null = null
+      let settled = false
+      const requestTempDir = createRequestTempDir(requestId ?? 'openscad-render')
+      const tempScadSource = path.join(requestTempDir, 'temp_model.scad')
+      const tempStlOutput = path.join(requestTempDir, 'render_preview.stl')
+
+      const resolveOnce = (result: CADRenderResult): void => {
+        if (settled) {
+          return
+        }
+        settled = true
+        cleanupTempPath(requestTempDir)
+        resolve(result)
+      }
 
       try {
         // 1. Persist the current code to a temporary file for the CLI
-        fs.writeFileSync(TEMP_SCAD_SOURCE, code, 'utf-8')
+        fs.writeFileSync(tempScadSource, code, 'utf-8')
 
-        const args = ['-o', TEMP_STL_OUTPUT, TEMP_SCAD_SOURCE]
+        const args = ['-o', tempStlOutput, tempScadSource]
 
         // 2. Validate environment before spawning
         if (!fs.existsSync(this.executablePath)) {
-          resolve({
+          resolveOnce({
             success: false,
             error: `OpenSCAD executable not found at: ${this.executablePath}`,
             timestamp: Date.now()
@@ -78,7 +77,7 @@ export class OpenSCADService implements CADService {
         timeoutId = setTimeout(() => {
           if (openscadProcess && !openscadProcess.killed) {
             openscadProcess.kill()
-            resolve({
+            resolveOnce({
               success: false,
               error: `Rendering timed out after ${RENDER_TIMEOUT_MS / 1000} seconds`,
               timestamp: Date.now()
@@ -97,12 +96,12 @@ export class OpenSCADService implements CADService {
           if (timeoutId) clearTimeout(timeoutId)
 
           if (exitCode === 0) {
-            if (fs.existsSync(TEMP_STL_OUTPUT)) {
-              const stats = fs.statSync(TEMP_STL_OUTPUT)
+            if (fs.existsSync(tempStlOutput)) {
+              const stats = fs.statSync(tempStlOutput)
               
               // Prevent memory issues with massive models
               if (stats.size > MAX_OUTPUT_FILE_SIZE) {
-                resolve({
+                resolveOnce({
                   success: false,
                   error: `STL too large: ${(stats.size / 1024 / 1024).toFixed(2)}MB (Limit: ${MAX_OUTPUT_FILE_SIZE / 1024 / 1024}MB)`,
                   timestamp: Date.now()
@@ -110,21 +109,21 @@ export class OpenSCADService implements CADService {
                 return
               }
 
-              const stlData = fs.readFileSync(TEMP_STL_OUTPUT)
-              resolve({
+              const stlData = fs.readFileSync(tempStlOutput)
+              resolveOnce({
                 success: true,
                 stlBase64: stlData.toString('base64'),
                 timestamp: Date.now()
               })
             } else {
-              resolve({
+              resolveOnce({
                 success: false,
                 error: 'STL output file was not created by the renderer',
                 timestamp: Date.now()
               })
             }
           } else {
-            resolve({
+            resolveOnce({
               success: false,
               error: `OpenSCAD failed (Code ${exitCode}): ${stderrBuf.value}`,
               timestamp: Date.now()
@@ -134,7 +133,7 @@ export class OpenSCADService implements CADService {
 
         openscadProcess.on('error', (error) => {
           if (timeoutId) clearTimeout(timeoutId)
-          resolve({
+          resolveOnce({
             success: false,
             error: `Failed to launch OpenSCAD: ${error.message}`,
             timestamp: Date.now()
@@ -146,7 +145,7 @@ export class OpenSCADService implements CADService {
           openscadProcess.kill()
         }
         const message = error instanceof Error ? error.message : 'An unexpected error occurred'
-        resolve({
+        resolveOnce({
           success: false,
           error: `Render context error: ${message}`,
           timestamp: Date.now()
@@ -226,4 +225,3 @@ export class OpenSCADService implements CADService {
     return 'scad'
   }
 }
-

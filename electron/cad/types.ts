@@ -57,7 +57,7 @@ export interface CADService {
    * @param code - The raw source code string
    * @returns A promise resolving to the render result
    */
-  renderStl(code: string): Promise<CADRenderResult>
+  renderStl(code: string, requestId?: string): Promise<CADRenderResult>
 
   /**
    * Verifies that the required executables and libraries are present and valid.

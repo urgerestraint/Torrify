@@ -14,4 +14,4 @@ Do not open a public issue for active security vulnerabilities.
 - CAD rendering is executed on the local machine.
 - Ollama can be used for fully local AI workflows.
 
-For repository policy details, see [`SECURITY.md`](../../SECURITY.md).
+For repository policy details, see [the root `SECURITY.md`](https://github.com/caseyhartnett/torrify/blob/main/SECURITY.md).

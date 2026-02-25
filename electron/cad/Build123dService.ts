@@ -3,26 +3,16 @@
 import { spawn } from 'child_process'
 import * as fs from 'fs'
 import * as path from 'path'
-import * as os from 'os'
 import type { CADService, CADRenderResult, CADValidationResult } from './types'
 import { createCappedBuffer } from './process-utils'
 import { logger } from '../utils/logger'
 import { MAX_OUTPUT_FILE_SIZE } from '../constants'
 import { generateBuild123dWrapperScript } from './build123d-wrapper'
 import { deriveBuild123dRenderError } from './build123d-errors'
+import { cleanupTempPath, createRequestTempDir } from '../utils/temp'
 
 // Constants
 const TIMEOUT_MS = 60000 // 60 seconds (Python can be slower)
-
-// Temp directory
-const TEMP_DIR = path.join(os.tmpdir(), 'torrify')
-const TEMP_PY_FILE = path.join(TEMP_DIR, 'temp_model.py')
-const STL_OUTPUT = path.join(TEMP_DIR, 'render_preview.stl')
-
-// Ensure temp directory exists
-if (!fs.existsSync(TEMP_DIR)) {
-  fs.mkdirSync(TEMP_DIR, { recursive: true })
-}
 
 export class Build123dService implements CADService {
   private pythonPath: string
@@ -32,23 +22,36 @@ export class Build123dService implements CADService {
     logger.debug('[Build123dService] Initialized with Python path:', this.pythonPath)
   }
 
-  async renderStl(code: string): Promise<CADRenderResult> {
+  async renderStl(code: string, requestId?: string): Promise<CADRenderResult> {
     return new Promise((resolve) => {
       let timeoutId: NodeJS.Timeout | null = null
       let pythonProcess: ReturnType<typeof spawn> | null = null
+      let settled = false
+      const requestTempDir = createRequestTempDir(requestId ?? 'build123d-render')
+      const tempPyFile = path.join(requestTempDir, 'temp_model.py')
+      const stlOutput = path.join(requestTempDir, 'render_preview.stl')
+
+      const resolveOnce = (result: CADRenderResult): void => {
+        if (settled) {
+          return
+        }
+        settled = true
+        cleanupTempPath(requestTempDir)
+        resolve(result)
+      }
 
       try {
         logger.debug('[Build123dService] renderStl called with pythonPath:', this.pythonPath)
 
         // Generate wrapper script
-        const wrapperScript = generateBuild123dWrapperScript(code, STL_OUTPUT)
+        const wrapperScript = generateBuild123dWrapperScript(code, stlOutput)
 
         // Write script to temporary file
-        fs.writeFileSync(TEMP_PY_FILE, wrapperScript, 'utf-8')
-        logger.debug('[Build123dService] Temp script written to:', TEMP_PY_FILE)
+        fs.writeFileSync(tempPyFile, wrapperScript, 'utf-8')
+        logger.debug('[Build123dService] Temp script written to:', tempPyFile)
 
         // Execute Python script
-        pythonProcess = spawn(this.pythonPath, [TEMP_PY_FILE], {
+        pythonProcess = spawn(this.pythonPath, [tempPyFile], {
           windowsHide: true,
           env: {
             ...process.env,
@@ -60,7 +63,7 @@ export class Build123dService implements CADService {
         timeoutId = setTimeout(() => {
           if (pythonProcess && !pythonProcess.killed) {
             pythonProcess.kill()
-            resolve({
+            resolveOnce({
               success: false,
               error: 'Python execution timed out after 60 seconds',
               timestamp: Date.now()
@@ -83,11 +86,11 @@ export class Build123dService implements CADService {
           if (timeoutId) clearTimeout(timeoutId)
 
           if (exitCode === 0) {
-            if (fs.existsSync(STL_OUTPUT)) {
+            if (fs.existsSync(stlOutput)) {
               // Validate file size
-              const stats = fs.statSync(STL_OUTPUT)
+              const stats = fs.statSync(stlOutput)
               if (stats.size > MAX_OUTPUT_FILE_SIZE) {
-                resolve({
+                resolveOnce({
                   success: false,
                   error: `STL file too large: ${(stats.size / 1024 / 1024).toFixed(2)}MB (max ${MAX_OUTPUT_FILE_SIZE / 1024 / 1024}MB)`,
                   timestamp: Date.now()
@@ -95,15 +98,15 @@ export class Build123dService implements CADService {
                 return
               }
 
-              const stlData = fs.readFileSync(STL_OUTPUT)
+              const stlData = fs.readFileSync(stlOutput)
               const base64Stl = stlData.toString('base64')
-              resolve({
+              resolveOnce({
                 success: true,
                 stlBase64: base64Stl,
                 timestamp: Date.now()
               })
             } else {
-              resolve({
+              resolveOnce({
                 success: false,
                 error: `STL output file not created. Output: ${stdoutBuf.value}\nErrors: ${stderrBuf.value}`,
                 timestamp: Date.now()
@@ -115,7 +118,7 @@ export class Build123dService implements CADService {
             const stdoutRaw = stdoutBuf.rawValue
             const errorMessage = deriveBuild123dRenderError(stderrRaw, stdoutRaw, exitCode)
             
-            resolve({
+            resolveOnce({
               success: false,
               error: errorMessage,
               timestamp: Date.now()
@@ -131,7 +134,7 @@ export class Build123dService implements CADService {
             errorMessage = `Python executable not found at: ${this.pythonPath}. Make sure Python is installed and the path is correct.`
           }
           
-          resolve({
+          resolveOnce({
             success: false,
             error: errorMessage,
             timestamp: Date.now()
@@ -143,7 +146,7 @@ export class Build123dService implements CADService {
           pythonProcess.kill()
         }
         const message = error instanceof Error ? error.message : 'Unknown error'
-        resolve({
+        resolveOnce({
           success: false,
           error: `Render error: ${message}`,
           timestamp: Date.now()

@@ -31,6 +31,8 @@ vi.mock('../utils/logger', () => ({ logger: { error: vi.fn(), debug: vi.fn() } }
 
 beforeEach(() => {
   vi.mocked(fs.existsSync).mockReturnValue(true)
+  vi.mocked(fs.mkdtempSync).mockReturnValue('/tmp/torrify-render-test')
+  vi.mocked(fs.rmSync).mockImplementation(() => undefined)
   vi.mocked(fs.writeFileSync).mockImplementation(() => {})
   vi.mocked(fs.readFileSync).mockReturnValue(Buffer.from('mock-png'))
   vi.mocked(fs.statSync).mockReturnValue({ size: 1000 } as fs.Stats)

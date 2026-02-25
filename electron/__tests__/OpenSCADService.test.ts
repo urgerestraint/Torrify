@@ -11,6 +11,8 @@ describe('OpenSCADService', () => {
 
   beforeEach(() => {
     vi.mocked(fs.existsSync).mockReturnValue(true)
+    vi.mocked(fs.mkdtempSync).mockReturnValue('/tmp/torrify-openscad-test')
+    vi.mocked(fs.rmSync).mockImplementation(() => undefined)
     vi.mocked(fs.writeFileSync).mockImplementation(() => {})
     vi.mocked(fs.readFileSync).mockReturnValue(Buffer.from('mock stl content'))
     vi.mocked(fs.statSync).mockReturnValue({ size: 1000 } as fs.Stats)

@@ -1,6 +1,7 @@
 import type { CADBackend, LLMMessage, StreamCallback } from './types'
 import { getSystemPrompt, getSystemPromptBlocks } from './prompts'
 import { logger } from '../utils/logger'
+import { FETCH_TIMEOUT_MS } from '../constants'
 
 export type MessageContentPart = { type: 'text' | 'image_url'; text?: string; image_url?: { url: string } }
 export type MessageContent = string | MessageContentPart[]
@@ -130,5 +131,65 @@ export const streamSseResponse = async (
         }
       }
     }
+  }
+}
+
+function combineAbortSignals(signals: AbortSignal[]): { signal: AbortSignal; cleanup: () => void } {
+  const controller = new AbortController()
+  const onAbort = (): void => controller.abort()
+
+  for (const signal of signals) {
+    if (signal.aborted) {
+      controller.abort()
+      return { signal: controller.signal, cleanup: () => {} }
+    }
+    signal.addEventListener('abort', onAbort, { once: true })
+  }
+
+  return {
+    signal: controller.signal,
+    cleanup: () => {
+      for (const signal of signals) {
+        signal.removeEventListener('abort', onAbort)
+      }
+    }
+  }
+}
+
+export const fetchWithTimeout = async (
+  input: string | URL,
+  init: RequestInit,
+  timeoutMs: number = FETCH_TIMEOUT_MS
+): Promise<Response> => {
+  const timeoutController = new AbortController()
+  const timeoutId = setTimeout(() => timeoutController.abort(), timeoutMs)
+
+  const signals: AbortSignal[] = [timeoutController.signal]
+  if (init.signal) {
+    signals.push(init.signal)
+  }
+
+  const { signal, cleanup } = combineAbortSignals(signals)
+
+  try {
+    return await fetch(input, {
+      ...init,
+      signal
+    })
+  } catch (error) {
+    const errorName =
+      typeof error === 'object' && error !== null && 'name' in error
+        ? String((error as { name?: unknown }).name)
+        : ''
+    if (
+      timeoutController.signal.aborted &&
+      errorName === 'AbortError'
+    ) {
+      throw new Error(`Request timed out after ${Math.ceil(timeoutMs / 1000)} seconds`)
+    }
+    throw error
+  } finally {
+    clearTimeout(timeoutId)
+    cleanup()
   }
 }
