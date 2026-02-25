@@ -3,6 +3,8 @@
 import type { ElectronAPI } from './types/electron-api'
 
 declare global {
+  const __WEB_RUNTIME__: boolean
+
   interface Window {
     electronAPI: ElectronAPI
   }

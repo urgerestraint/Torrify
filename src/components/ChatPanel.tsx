@@ -1,6 +1,7 @@
 import { useRef, useEffect, useCallback, useState } from 'react'
 import { createLLMService, PROVIDER_NAMES, requiresApiKey, type LLMMessage, type StreamController } from '../services/llm'
 import type { CADBackend } from '../services/cad'
+import { isWebRuntime } from '../platform/runtime'
 import { logger } from '../utils/logger'
 
 /**
@@ -173,6 +174,7 @@ function ChatPanel({
   onDiagnosisSent, 
   settingsVersion = 0 
 }: ChatPanelProps) {
+  const managedWebMode = isWebRuntime()
   const [input, setInput] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [isStreaming, setIsStreaming] = useState(false)
@@ -325,7 +327,11 @@ ${pendingDiagnosis.code}
           if (settings.llm.gatewayLicenseKey?.trim()) {
             setLlmStatus(`${PROVIDER_NAMES[settings.llm.provider]} (${settings.llm.model})`)
           } else {
-            setLlmStatus('PRO License Key Required - Configure in Settings')
+            setLlmStatus(
+              managedWebMode
+                ? `PRO Gateway (Free Tier)${settings.llm.model ? ` (${settings.llm.model})` : ''}`
+                : 'PRO License Key Required - Configure in Settings'
+            )
           }
         } else if (settings.llm.provider === 'openrouter') {
           const configured = await window.electronAPI.getOpenRouterConfigured()
@@ -366,7 +372,7 @@ ${pendingDiagnosis.code}
 
       // Validate provider configuration before attempt
       if (settings.llm.provider === 'gateway') {
-        if (!settings.llm.gatewayLicenseKey?.trim()) {
+        if (!managedWebMode && !settings.llm.gatewayLicenseKey?.trim()) {
           throw new Error('PRO license key not configured. Add it in Settings.')
         }
       } else if (settings.llm.provider === 'openrouter') {
@@ -502,7 +508,7 @@ ${pendingDiagnosis.code}
         onSnapshotsSent?.()
       }
     }
-  }, [currentCode, messages, onSnapshotsSent, cadBackend, setMessages, apiContext, includeContext])
+  }, [managedWebMode, currentCode, messages, onSnapshotsSent, cadBackend, setMessages, apiContext, includeContext])
   sendToLlmRef.current = sendToLlm
 
   /**

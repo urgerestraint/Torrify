@@ -69,6 +69,7 @@ const OPENAI_MODEL_GROUPS = [
 
 interface AISettingsProps {
   settings: Settings
+  managedGatewayMode?: boolean
   openRouterKeySet: boolean | null
   ollamaModels: OllamaModel[]
   isLoadingOllamaModels: boolean
@@ -81,6 +82,7 @@ interface AISettingsProps {
 
 export function AISettings({
   settings,
+  managedGatewayMode = false,
   openRouterKeySet,
   ollamaModels,
   isLoadingOllamaModels,
@@ -98,36 +100,45 @@ export function AISettings({
       aria-labelledby="settings-tab-ai"
     >
       {/* Access Mode */}
-      <div>
-        <label className="block text-sm font-medium text-gray-300 mb-2">Access Mode</label>
-        <div className="flex gap-2">
-          <button
-            onClick={() => onAccessModeChange('byok')}
-            className={`px-3 py-2 rounded text-sm border ${
-              settings.llm.provider === 'gateway'
-                ? 'border-[#3e3e42] text-gray-400'
-                : 'border-blue-500 text-blue-300 bg-blue-500/10'
-            }`}
-          >
-            BYOK
-          </button>
-          <button
-            onClick={() => onAccessModeChange('pro')}
-            className={`px-3 py-2 rounded text-sm border ${
-              settings.llm.provider === 'gateway'
-                ? 'border-blue-500 text-blue-300 bg-blue-500/10'
-                : 'border-[#3e3e42] text-gray-400'
-            }`}
-          >
-            PRO
-          </button>
+      {!managedGatewayMode ? (
+        <div>
+          <label className="block text-sm font-medium text-gray-300 mb-2">Access Mode</label>
+          <div className="flex gap-2">
+            <button
+              onClick={() => onAccessModeChange('byok')}
+              className={`px-3 py-2 rounded text-sm border ${
+                settings.llm.provider === 'gateway'
+                  ? 'border-[#3e3e42] text-gray-400'
+                  : 'border-blue-500 text-blue-300 bg-blue-500/10'
+              }`}
+            >
+              BYOK
+            </button>
+            <button
+              onClick={() => onAccessModeChange('pro')}
+              className={`px-3 py-2 rounded text-sm border ${
+                settings.llm.provider === 'gateway'
+                  ? 'border-blue-500 text-blue-300 bg-blue-500/10'
+                  : 'border-[#3e3e42] text-gray-400'
+              }`}
+            >
+              PRO
+            </button>
+          </div>
+          <p className="text-xs text-gray-500 mt-1">
+            {settings.llm.provider === 'gateway'
+              ? 'PRO uses the managed LLM (gateway) with your license key.'
+              : 'BYOK uses your provider API key from this settings screen.'}
+          </p>
         </div>
-        <p className="text-xs text-gray-500 mt-1">
-          {settings.llm.provider === 'gateway'
-            ? 'PRO uses the managed LLM (gateway) with your license key.'
-            : 'BYOK uses your provider API key from this settings screen.'}
-        </p>
-      </div>
+      ) : (
+        <div className="p-3 rounded border border-blue-700/50 bg-blue-900/20">
+          <p className="text-sm text-blue-200 font-medium">Managed Online Mode</p>
+          <p className="text-xs text-blue-100/90 mt-1">
+            The web app always uses the managed OpenRouter PRO gateway. Free usage is available with automatic limits.
+          </p>
+        </div>
+      )}
 
       {/* Enable/Disable AI */}
       <div className="flex items-center justify-between">
@@ -138,7 +149,9 @@ export function AISettings({
             <p className="text-xs text-yellow-400 mt-1">⚠️ API key required to use AI features</p>
           )}
           {settings.llm.enabled && settings.llm.provider === 'gateway' && !settings.llm.gatewayLicenseKey?.trim() && (
-            <p className="text-xs text-yellow-400 mt-1">⚠️ PRO license key is not set</p>
+            <p className="text-xs text-yellow-400 mt-1">
+              {managedGatewayMode ? '⚠️ Using free tier limits (add license key for more usage)' : '⚠️ PRO license key is not set'}
+            </p>
           )}
           {settings.llm.enabled && settings.llm.provider === 'openrouter' && openRouterKeySet === false && (
             <p className="text-xs text-yellow-400 mt-1">⚠️ OPENROUTER_API_KEY is not set</p>
@@ -159,7 +172,7 @@ export function AISettings({
       </div>
 
       {/* Provider Selection - BYOK only */}
-      {settings.llm.provider !== 'gateway' && (
+      {!managedGatewayMode && settings.llm.provider !== 'gateway' && (
         <div>
           <label className="block text-sm font-medium text-gray-300 mb-2">LLM Provider</label>
           <select
@@ -182,21 +195,30 @@ export function AISettings({
       {/* PRO: License key only */}
       {settings.llm.provider === 'gateway' && (
         <div>
-          <label className="block text-sm font-medium text-gray-300 mb-2">PRO License Key</label>
+          <label className="block text-sm font-medium text-gray-300 mb-2">
+            {managedGatewayMode ? 'License Key (Optional)' : 'PRO License Key'}
+          </label>
           <input
             type="password"
+            name="gatewayLicenseKey"
+            autoComplete="current-password"
             value={settings.llm.gatewayLicenseKey ?? ''}
             onChange={(e) => onLLMChange('gatewayLicenseKey', e.target.value)}
             disabled={!settings.llm.enabled}
             className="w-full bg-[#1e1e1e] text-white px-3 py-2 rounded border border-[#3e3e42] focus:outline-none focus:border-blue-500 disabled:opacity-50 disabled:cursor-not-allowed font-mono text-sm"
-            placeholder="Enter your PRO license key"
+            placeholder={managedGatewayMode ? 'Enter license key to unlock more usage' : 'Enter your PRO license key'}
           />
-          <p className="text-xs text-gray-500 mt-1">Enter the license key for your PRO subscription.</p>
+          <p className="text-xs text-gray-500 mt-1">
+            {managedGatewayMode
+              ? 'Leave blank to use free tier limits. Add your Lemon Squeezy license key to continue with higher usage.'
+              : 'Enter the license key for your PRO subscription.'}
+          </p>
         </div>
       )}
 
       {/* Model Name */}
-      <div>
+      {!managedGatewayMode ? (
+        <div>
         <label className="block text-sm font-medium text-gray-300 mb-2">Model</label>
         {settings.llm.provider === 'openrouter' || settings.llm.provider === 'gateway' ? (
           <select
@@ -311,9 +333,21 @@ export function AISettings({
           </>
         )}
       </div>
+      ) : (
+        <div>
+          <label className="block text-sm font-medium text-gray-300 mb-2">Model</label>
+          <div className="w-full bg-[#1e1e1e] text-gray-300 px-3 py-2 rounded border border-[#3e3e42]">
+            Managed by Torrify service policy
+          </div>
+          <p className="text-xs text-gray-500 mt-1">
+            Model selection is controlled server-side for abuse prevention and cost control.
+          </p>
+        </div>
+      )}
 
       {/* API Key - BYOK providers */}
-      {settings.llm.provider !== 'openrouter' &&
+      {!managedGatewayMode &&
+        settings.llm.provider !== 'openrouter' &&
         settings.llm.provider !== 'ollama' &&
         settings.llm.provider !== 'gateway' && (
           <div>
@@ -338,7 +372,7 @@ export function AISettings({
         )}
 
       {/* Custom Endpoint (for custom and ollama providers) */}
-      {(settings.llm.provider === 'custom' || settings.llm.provider === 'ollama') && (
+      {!managedGatewayMode && (settings.llm.provider === 'custom' || settings.llm.provider === 'ollama') && (
         <div>
           <label className="block text-sm font-medium text-gray-300 mb-2">API Endpoint</label>
           <input

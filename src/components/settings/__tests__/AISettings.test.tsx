@@ -104,4 +104,27 @@ describe('AISettings', () => {
     render(<AISettings {...defaultProps} settings={settings} />)
     expect(screen.getByPlaceholderText(/Enter your PRO license key/)).toBeInTheDocument()
   })
+
+  it('hides BYOK controls in managed web mode', () => {
+    const settings: Settings = {
+      ...defaultSettings,
+      llm: { ...defaultSettings.llm, provider: 'gateway', gatewayLicenseKey: '' }
+    }
+    render(<AISettings {...defaultProps} settings={settings} managedGatewayMode />)
+    expect(screen.queryByRole('button', { name: 'BYOK' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'PRO' })).not.toBeInTheDocument()
+    expect(screen.getByText(/Managed Online Mode/)).toBeInTheDocument()
+  })
+
+  it('uses password-manager-friendly attributes for license key in managed web mode', () => {
+    const settings: Settings = {
+      ...defaultSettings,
+      llm: { ...defaultSettings.llm, provider: 'gateway', gatewayLicenseKey: '' }
+    }
+    render(<AISettings {...defaultProps} settings={settings} managedGatewayMode />)
+    const input = screen.getByPlaceholderText(/Enter license key to unlock more usage/) as HTMLInputElement
+    expect(input.type).toBe('password')
+    expect(input.name).toBe('gatewayLicenseKey')
+    expect(input.autocomplete).toBe('current-password')
+  })
 })
