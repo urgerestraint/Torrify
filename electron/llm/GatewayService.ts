@@ -1,5 +1,13 @@
 import type { LLMService, LLMMessage, LLMResponse, LLMConfig, CADBackend, StreamCallback, StreamController } from './types'
-import { buildMessageContent, buildSystemContent, extractContent, streamSseResponse, type MessageContent, type SystemMessageContent } from './utils'
+import {
+  buildMessageContent,
+  buildSystemContent,
+  extractContent,
+  fetchWithTimeout,
+  streamSseResponse,
+  type MessageContent,
+  type SystemMessageContent
+} from './utils'
 import { logger } from '../utils/logger'
 import { GATEWAY_BASE_URL } from '../constants'
 
@@ -109,7 +117,7 @@ export class GatewayService implements LLMService {
       max_tokens: maxOutputTokens
     }
 
-    const response = await fetch(endpoint, {
+    const response = await fetchWithTimeout(endpoint, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -185,7 +193,7 @@ export class GatewayService implements LLMService {
         const payloadMessages = this.buildPayloadMessages(messages, systemContent)
         const maxOutputTokens = this.getMaxOutputTokens(payloadMessages)
 
-        const response = await fetch(endpoint, {
+        const response = await fetchWithTimeout(endpoint, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

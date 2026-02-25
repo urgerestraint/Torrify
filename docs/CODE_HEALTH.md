@@ -1,104 +1,88 @@
 # Code Health - Torrify
 
-**Last Updated**: February 23, 2026  
+**Last Updated**: February 24, 2026  
 **Reviewer**: Codex repository audit  
-**Assessment Type**: Static code health review + runtime verification
+**Assessment Type**: Static code + docs review with runtime verification
 
 ## Current Snapshot
 
-- Total tracked files: `228`
-- Source files in `src/` + `electron/`: `154`
+- Total tracked files: `227`
+- Source files in `src/` + `electron/`: `157`
 - Test files detected (`__tests__`, `.test`, `.spec`): `68`
-- Total TS/TSX line count (`src` + `electron`): `20,223`
+- Total TS/TSX line count (`src` + `electron`): `20,329`
 
 Runtime checks completed in this environment:
 
 - `npm run lint` -> pass
-- `npm test` -> pass (`56` test files passed, `1` skipped; `499` tests passed, `6` skipped)
-- `npm run test:coverage` -> pass (global coverage: statements `87.2%`, branches `73.16%`, functions `65.53%`, lines `87.2%`)
+- `npm test` -> pass (`57` test files passed, `1` skipped; `502` tests passed, `6` skipped)
+- `npm run test:coverage` -> pass (global coverage: statements `87.07%`, branches `73.53%`, functions `64.4%`, lines `87.07%`)
+- `npm run docs:build` -> pass (with VitePress fallback warnings for `scad` syntax highlighting)
 
-## Health Summary
+## Release Readiness Summary
 
-The repository remains healthy overall. This pass validated runtime checks and completed additional refactors for async test stability in `SettingsModal` and `ChatPanel`.
+The codebase is stable from a lint/test perspective, coverage remains strong, and docs now build successfully. Remaining near-release gaps are centered on memory-pressure limits and a small number of lower-priority maintainability/security-hardening tasks.
 
-### Strengths
+## Findings (This Pass)
 
-- Clear separation of renderer (`src/`) and main process (`electron/`) concerns.
-- IPC handlers are modularized by domain (`electron/ipc/*`).
-- Extensive test footprint by file count (`68` test files).
-- No broad `TODO/FIXME/HACK` markers found in source/doc scans.
-- Logging is centralized through `src/utils/logger.ts` and `electron/utils/logger.ts`.
+### High
 
-### Areas to Improve
+None in this pass.
 
-1. **Large UI files still centralize too much behavior**
-- `src/components/ChatPanel.tsx` (`739` lines)
-- `src/App.tsx` (`698` lines)
-- Prompt duplication was removed; `electron/llm/prompts.ts` now re-exports the renderer prompt source instead of maintaining a second 600+ line copy.
+### Medium
 
-2. **Test output still includes expected-but-noisy stderr logs**
-- `ErrorBoundary` tests intentionally emit React/JSDOM error traces.
-- `ChatPanel` disabled-AI test intentionally emits logger error output.
-- These are expected and non-failing, but they reduce readability of CI logs.
+1. **Large payload ceilings remain high for base64 IPC transfer**
+- File: `electron/constants.ts`
+- Detail: `MAX_OUTPUT_FILE_SIZE` and `MAX_SCAD_FILE_SIZE` remain `250MB`
+- Impact: high memory pressure risk when large binary payloads are base64-encoded and moved across process boundaries
 
-## Resolved In This Pass
+### Low
 
-1. **IPC payload validation gaps tightened**
-- `llm-send-message` / `llm-stream-message` are Zod-validated.
-- `export-stl` now validates payload shape/size at the IPC boundary before decode/write.
+1. **VitePress warnings for OpenSCAD fences**
+- Files:
+  - `README.md`
+  - `docs/getting-started/START_HERE.md`
+  - `docs/getting-started/QUICKSTART.md`
+- Impact: noisy docs builds and reduced syntax highlighting quality
 
-2. **Ollama endpoint hardening**
-- Added request timeout handling in `get-ollama-models`.
-- Remote endpoints are blocked by default; explicit opt-in via `TORRIFY_ALLOW_REMOTE_OLLAMA=1`.
+2. **Path validation may reject valid normalized paths**
+- File: `electron/validation/pathValidator.ts`
+- Detail: raw `..` substring check can reject otherwise safe normalized paths
 
-3. **Cross-layer type drift reduced**
-- Removed duplicate `Window` global declaration from `electron/preload.ts`.
-- Renderer keeps the single global bridge declaration in `src/vite-env.d.ts`.
+3. **Expected stderr noise still clutters test logs**
+- Files:
+  - `src/components/__tests__/ErrorBoundary.test.tsx`
+  - `src/components/__tests__/ChatPanel.test.tsx`
 
-4. **Documentation loader path drift fixed**
-- `DOC_FILES` entries in `electron/ipc/window-doc-handlers.ts` now map to existing docs.
+## Completed In This Pass
 
-5. **Async test stability improved**
-- `SettingsModal` now uses consolidated initial async loading/validation and mounted guards.
-- `SettingsModal` and `ChatPanel` tests now await async transitions with explicit `act(...)` wrapping.
-- Prior high-volume `act(...)` warning noise from these suites has been removed.
+1. Fixed docs dead link in `docs/security/index.md`; `npm run docs:build` now passes.
+2. Moved CAD render artifacts to request-scoped temp directories and cleanup paths.
+3. Added shared `fetchWithTimeout` helper and applied it to OpenAI, OpenRouter, Ollama, and Gateway services.
+4. Added timeout helper unit coverage in `electron/__tests__/llm-utils.test.ts`.
 
-## Prioritized Recommendations
+## Prioritized Patch Order (Remaining)
 
-### P1 (High Impact)
+1. Re-benchmark and lower practical IPC file-size ceilings where possible.
+2. Tighten context import policy (`raw.githubusercontent.com`-only or stronger payload validation).
+3. Reduce avoidable test stderr noise and split large UI orchestration files (`ChatPanel`, `App`) after release blockers.
 
-1. Keep runtime schema validation as a release gate for all new IPC handlers.
-2. Keep docs loader paths validated in tests/CI to prevent filename drift.
-3. Continue publishing quality summary:
-- lint violations
-- test pass rate
-- coverage summary
+## Evidence Commands
 
-### P2 (Maintainability)
-
-1. Break down `ChatPanel` and `App` into smaller orchestration + feature slices.
-2. Reduce expected stderr noise in tests (error-boundary and intentional logger-path tests), or document/scope it in CI output.
-
-### P3 (Tooling)
-
-1. Add/confirm pre-commit checks (`lint`, targeted tests, formatting).
-2. Add CI gates for docs link integrity and IPC contract tests.
-3. Pin to a supported Node LTS/npm combination in CI and local docs (current environment is Node `24.13.1` + npm `11.8.0`).
-
-## Evidence Commands (Static)
-
-Commands used in this review:
-
+- `npm run lint`
+- `npm test`
+- `npm run test:coverage`
+- `npm run docs:build`
 - `rg --files | wc -l`
 - `rg --files src electron | wc -l`
 - `rg --files src electron | rg "__tests__|\.test\.|\.spec\." | wc -l`
-- `find src electron -type f \( -name '*.ts' -o -name '*.tsx' \) -print0 | xargs -0 wc -l | sort -nr | head -n 20`
-- `rg -n "\bany\b" src electron --glob '!**/__tests__/**' --glob '!**/*.test.*' --glob '!**/*.spec.*'`
-- `rg -n "TODO|FIXME|HACK|XXX" src electron docs`
+- `find src electron -type f \( -name '*.ts' -o -name '*.tsx' \) -print0 | xargs -0 wc -l | tail -n 1`
+- `find src electron -type f \( -name '*.ts' -o -name '*.tsx' \) -print0 | xargs -0 wc -l | sort -nr | head -n 12`
+- `rg -n "TODO|FIXME|HACK|XXX" src electron docs README.md`
 
 ## Re-Run Plan
 
 1. `npm run lint`
 2. `npm test`
 3. `npm run test:coverage`
-4. Update this file with exact lint/test/coverage outputs.
+4. `npm run docs:build`
+5. Update this file with exact outputs and date-stamped findings.

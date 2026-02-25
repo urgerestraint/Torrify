@@ -1,5 +1,13 @@
 import type { LLMService, LLMMessage, LLMResponse, LLMConfig, CADBackend, StreamCallback, StreamController } from './types'
-import { buildMessageContent, buildSystemContent, extractContent, streamSseResponse, type MessageContent, type SystemMessageContent } from './utils'
+import {
+  buildMessageContent,
+  buildSystemContent,
+  extractContent,
+  fetchWithTimeout,
+  streamSseResponse,
+  type MessageContent,
+  type SystemMessageContent
+} from './utils'
 import { logger } from '../utils/logger'
 
 /** Standard OpenAI chat completions endpoint */
@@ -68,7 +76,7 @@ export class OpenAIService implements LLMService {
     })
     const payloadMessages = this.buildPayloadMessages(messages, systemContent)
 
-    const response = await fetch(OPENAI_ENDPOINT, {
+    const response = await fetchWithTimeout(OPENAI_ENDPOINT, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${this.config.apiKey}`,
@@ -144,7 +152,7 @@ export class OpenAIService implements LLMService {
         })
         const payloadMessages = this.buildPayloadMessages(messages, systemContent)
 
-        const response = await fetch(OPENAI_ENDPOINT, {
+        const response = await fetchWithTimeout(OPENAI_ENDPOINT, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${this.config.apiKey}`,

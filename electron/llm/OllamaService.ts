@@ -1,5 +1,6 @@
 import type { LLMService, LLMMessage, LLMResponse, LLMConfig, CADBackend, StreamCallback, StreamController } from './types'
 import { getSystemPrompt } from './prompts'
+import { fetchWithTimeout } from './utils'
 import { logger } from '../utils/logger'
 
 const DEFAULT_OLLAMA_ENDPOINT = 'http://127.0.0.1:11434'
@@ -39,7 +40,7 @@ export class OllamaService implements LLMService {
     const systemPrompt = getSystemPrompt(cadBackend, currentCode, apiContext)
     const payloadMessages = this.buildPayloadMessages(messages, systemPrompt)
 
-    const response = await fetch(`${this.endpoint}/api/chat`, {
+    const response = await fetchWithTimeout(`${this.endpoint}/api/chat`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -92,7 +93,7 @@ export class OllamaService implements LLMService {
         const systemPrompt = getSystemPrompt(cadBackend, currentCode, apiContext)
         const payloadMessages = this.buildPayloadMessages(messages, systemPrompt)
 
-        const response = await fetch(`${this.endpoint}/api/chat`, {
+        const response = await fetchWithTimeout(`${this.endpoint}/api/chat`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
