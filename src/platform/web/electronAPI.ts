@@ -17,7 +17,8 @@ import { OpenScadWasmRenderer } from './openscadRenderer'
 
 const SETTINGS_STORAGE_KEY = 'torrify.web.settings.v1'
 const RECENT_FILES_STORAGE_KEY = 'torrify.web.recent.v1'
-const DEFAULT_GATEWAY_BASE_URL = 'https://the-gatekeeper-production.up.railway.app'
+const DEFAULT_GATEWAY_BASE_URL = 'https://the-gateway-production.up.railway.app'
+const LEGACY_GATEWAY_BASE_URL = 'https://the-gatekeeper-production.up.railway.app'
 const DEFAULT_GATEWAY_MODEL = 'openai/gpt-4o-mini'
 const DEFAULT_WEB_RENDER_MODE = 'wasm'
 const DEFAULT_WASM_RENDER_TIMEOUT_MS = 45000
@@ -35,9 +36,11 @@ function nowIso(): string {
   return new Date().toISOString()
 }
 
-function getGatewayBaseUrl(): string {
+function getGatewayBaseUrls(): string[] {
   const envUrl = import.meta.env.VITE_GATEWAY_URL?.trim()
-  return (envUrl || DEFAULT_GATEWAY_BASE_URL).replace(/\/+$/, '')
+  const primary = (envUrl || DEFAULT_GATEWAY_BASE_URL).replace(/\/+$/, '')
+  const fallback = LEGACY_GATEWAY_BASE_URL.replace(/\/+$/, '')
+  return Array.from(new Set([primary, fallback]))
 }
 
 function getRenderBaseUrl(): string {
@@ -257,7 +260,6 @@ async function sendGatewayRequest(
   const settings = loadSettings()
   const model = import.meta.env.VITE_GATEWAY_MODEL?.trim() || DEFAULT_GATEWAY_MODEL
   const cadBackend = payload.cadBackend === 'build123d' ? 'build123d' : 'openscad'
-  const endpoint = `${getGatewayBaseUrl()}/api/chat`
   const systemContent = buildSystemContent({
     model,
     cadBackend,
@@ -281,18 +283,33 @@ async function sendGatewayRequest(
     headers['X-License-Key'] = licenseKey
   }
 
-  return fetch(endpoint, {
-    method: 'POST',
-    headers,
-    signal,
-    body: JSON.stringify({
-      model,
-      messages,
-      stream,
-      temperature: settings.llm.temperature ?? 0.7,
-      max_tokens: settings.llm.maxTokens ?? 4096
-    })
+  const body = JSON.stringify({
+    model,
+    messages,
+    stream,
+    temperature: settings.llm.temperature ?? 0.7,
+    max_tokens: settings.llm.maxTokens ?? 4096
   })
+
+  let lastError: unknown = null
+  const baseUrls = getGatewayBaseUrls()
+  for (const baseUrl of baseUrls) {
+    const endpoint = `${baseUrl}/api/chat`
+    try {
+      return await fetch(endpoint, {
+        method: 'POST',
+        headers,
+        signal,
+        body
+      })
+    } catch (error) {
+      lastError = error
+    }
+  }
+
+  throw lastError instanceof Error
+    ? lastError
+    : new Error('Gateway request failed: all configured base URLs were unreachable')
 }
 
 async function startGatewayStream(streamId: string, payload: LLMRequestPayload): Promise<void> {
