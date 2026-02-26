@@ -279,6 +279,7 @@ async function sendGatewayRequest(
     'Content-Type': 'application/json'
   }
   const licenseKey = (settings.llm.gatewayLicenseKey || '').trim()
+  const chatPath = licenseKey ? '/api/chat' : '/api/chat/free'
   if (licenseKey) {
     headers['X-License-Key'] = licenseKey
   }
@@ -294,7 +295,7 @@ async function sendGatewayRequest(
   let lastError: unknown = null
   const baseUrls = getGatewayBaseUrls()
   for (const baseUrl of baseUrls) {
-    const endpoint = `${baseUrl}/api/chat`
+    const endpoint = `${baseUrl}${chatPath}`
     try {
       return await fetch(endpoint, {
         method: 'POST',
