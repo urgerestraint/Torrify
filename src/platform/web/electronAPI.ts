@@ -38,9 +38,13 @@ function nowIso(): string {
 
 function getGatewayBaseUrls(): string[] {
   const envUrl = import.meta.env.VITE_GATEWAY_URL?.trim()
-  const primary = (envUrl || DEFAULT_GATEWAY_BASE_URL).replace(/\/+$/, '')
-  const fallback = LEGACY_GATEWAY_BASE_URL.replace(/\/+$/, '')
-  return Array.from(new Set([primary, fallback]))
+  return Array.from(
+    new Set(
+      [envUrl, DEFAULT_GATEWAY_BASE_URL, LEGACY_GATEWAY_BASE_URL]
+        .filter((value): value is string => !!value?.trim())
+        .map((value) => value.replace(/\/+$/, ''))
+    )
+  )
 }
 
 function getRenderBaseUrl(): string {
@@ -279,7 +283,7 @@ async function sendGatewayRequest(
     'Content-Type': 'application/json'
   }
   const licenseKey = (settings.llm.gatewayLicenseKey || '').trim()
-  const chatPath = licenseKey ? '/api/chat' : '/api/chat/free'
+  const chatPaths = licenseKey ? ['/api/chat'] : ['/api/chat/free', '/api/chat']
   if (licenseKey) {
     headers['X-License-Key'] = licenseKey
   }
@@ -293,19 +297,39 @@ async function sendGatewayRequest(
   })
 
   let lastError: unknown = null
+  const attemptErrors: string[] = []
   const baseUrls = getGatewayBaseUrls()
   for (const baseUrl of baseUrls) {
-    const endpoint = `${baseUrl}${chatPath}`
-    try {
-      return await fetch(endpoint, {
-        method: 'POST',
-        headers,
-        signal,
-        body
-      })
-    } catch (error) {
-      lastError = error
+    for (const chatPath of chatPaths) {
+      const endpoint = `${baseUrl}${chatPath}`
+      try {
+        const response = await fetch(endpoint, {
+          method: 'POST',
+          headers,
+          signal,
+          body
+        })
+
+        if (response.ok) {
+          return response
+        }
+
+        const responseText = (await response.text()).trim()
+        const normalizedText = responseText.replace(/\s+/g, ' ')
+        const suffix = normalizedText ? ` ${normalizedText.slice(0, 180)}` : ''
+        attemptErrors.push(`${response.status} ${endpoint}${suffix}`)
+      } catch (error) {
+        // Respect active aborts from stream cancellation.
+        if (error instanceof DOMException && error.name === 'AbortError') {
+          throw error
+        }
+        lastError = error
+      }
     }
+  }
+
+  if (attemptErrors.length > 0) {
+    throw new Error(`Gateway request failed across all endpoints: ${attemptErrors.join(' | ')}`)
   }
 
   throw lastError instanceof Error
