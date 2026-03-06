@@ -42,20 +42,52 @@ function parseGatewayUrlList(value: string | undefined): string[] {
   }
   return value
     .split(',')
-    .map((entry) => entry.trim())
-    .filter((entry) => entry.length > 0)
+    .map((entry) => normalizeGatewayBaseUrl(entry))
+    .filter((entry): entry is string => !!entry)
+}
+
+function normalizeGatewayBaseUrl(value: string | undefined): string | undefined {
+  if (!value) {
+    return undefined
+  }
+
+  // Cloud build envs sometimes preserve internal whitespace/newlines.
+  const compact = value.replace(/\s+/g, '').trim()
+  if (!compact) {
+    return undefined
+  }
+
+  try {
+    const parsed = new URL(compact)
+    if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') {
+      return undefined
+    }
+    return `${parsed.origin}${parsed.pathname}`.replace(/\/+$/, '')
+  } catch {
+    return undefined
+  }
+}
+
+function uniqueDefinedUrls(values: Array<string | undefined>): string[] {
+  return Array.from(
+    new Set(
+      values
+        .map((value) => normalizeGatewayBaseUrl(value))
+        .filter((value): value is string => !!value)
+    )
+  )
 }
 
 function getGatewayBaseUrls(preferredUrl?: string): string[] {
-  const envUrl = import.meta.env.VITE_GATEWAY_URL?.trim()
+  const envUrl = import.meta.env.VITE_GATEWAY_URL
   const envFallbackUrls = parseGatewayUrlList(import.meta.env.VITE_GATEWAY_FALLBACK_URLS)
-  return Array.from(
-    new Set(
-      [preferredUrl, envUrl, ...envFallbackUrls, DEFAULT_GATEWAY_BASE_URL, LEGACY_GATEWAY_BASE_URL]
-        .filter((value): value is string => !!value?.trim())
-        .map((value) => value.replace(/\/+$/, ''))
-    )
-  )
+  return uniqueDefinedUrls([
+    preferredUrl,
+    envUrl,
+    ...envFallbackUrls,
+    DEFAULT_GATEWAY_BASE_URL,
+    LEGACY_GATEWAY_BASE_URL
+  ])
 }
 
 function getRenderBaseUrl(): string {
