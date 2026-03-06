@@ -36,11 +36,22 @@ function nowIso(): string {
   return new Date().toISOString()
 }
 
-function getGatewayBaseUrls(): string[] {
+function parseGatewayUrlList(value: string | undefined): string[] {
+  if (!value) {
+    return []
+  }
+  return value
+    .split(',')
+    .map((entry) => entry.trim())
+    .filter((entry) => entry.length > 0)
+}
+
+function getGatewayBaseUrls(preferredUrl?: string): string[] {
   const envUrl = import.meta.env.VITE_GATEWAY_URL?.trim()
+  const envFallbackUrls = parseGatewayUrlList(import.meta.env.VITE_GATEWAY_FALLBACK_URLS)
   return Array.from(
     new Set(
-      [envUrl, DEFAULT_GATEWAY_BASE_URL, LEGACY_GATEWAY_BASE_URL]
+      [preferredUrl, envUrl, ...envFallbackUrls, DEFAULT_GATEWAY_BASE_URL, LEGACY_GATEWAY_BASE_URL]
         .filter((value): value is string => !!value?.trim())
         .map((value) => value.replace(/\/+$/, ''))
     )
@@ -158,7 +169,10 @@ function normalizeSettings(input: Partial<Settings> | null | undefined): Setting
       customEndpoint: undefined,
       temperature: typeof llm.temperature === 'number' ? llm.temperature : 0.7,
       maxTokens: typeof llm.maxTokens === 'number' ? llm.maxTokens : 4096,
-      gatewayBaseUrl: undefined,
+      gatewayBaseUrl:
+        typeof llm.gatewayBaseUrl === 'string' && llm.gatewayBaseUrl.trim().length > 0
+          ? llm.gatewayBaseUrl.trim()
+          : undefined,
       gatewayLicenseKey:
         typeof llm.gatewayLicenseKey === 'string' ? llm.gatewayLicenseKey : ''
     },
@@ -298,7 +312,7 @@ async function sendGatewayRequest(
 
   let lastError: unknown = null
   const attemptErrors: string[] = []
-  const baseUrls = getGatewayBaseUrls()
+  const baseUrls = getGatewayBaseUrls(settings.llm.gatewayBaseUrl)
   for (const baseUrl of baseUrls) {
     for (const chatPath of chatPaths) {
       const endpoint = `${baseUrl}${chatPath}`
