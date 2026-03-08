@@ -119,41 +119,42 @@ export class GeminiService implements LLMService {
       abort: () => { aborted = true }
     }
 
-    ;(async () => {
-      let accumulated = ''
-      try {
-        const model = this.client.getGenerativeModel({ model: this.config.model })
-        const systemPrompt = getSystemPrompt(cadBackend, currentCode, apiContext)
-        const history = this.buildHistory(messages, systemPrompt, cadBackend)
+      ; (async () => {
+        let accumulated = ''
+        try {
+          const model = this.client.getGenerativeModel({ model: this.config.model })
+          const systemPrompt = getSystemPrompt(cadBackend, currentCode, apiContext)
+          const history = this.buildHistory(messages, systemPrompt, cadBackend)
 
-        const chat = model.startChat({
-          history,
-          generationConfig: {
-            temperature: this.config.temperature || 0.7,
-            maxOutputTokens: this.config.maxTokens || 128000,
-          },
-        })
+          const chat = model.startChat({
+            history,
+            generationConfig: {
+              temperature: this.config.temperature || 0.7,
+              maxOutputTokens: this.config.maxTokens || 128000,
+            },
+          })
 
-        const lastMessage = messages[messages.length - 1]
-        const partsToSend = this.buildParts(lastMessage, `${systemPrompt}\n\n${lastMessage.content}`)
-        const result = await chat.sendMessageStream(partsToSend)
+          const lastMessage = messages[messages.length - 1]
+          const partsToSend = this.buildParts(lastMessage, `${systemPrompt}\n\n${lastMessage.content}`)
+          const result = await chat.sendMessageStream(partsToSend)
 
-        for await (const chunk of result.stream) {
-          if (aborted) break
-          const chunkText = chunk.text()
-          accumulated += chunkText
-          onChunk(chunkText, accumulated, false)
+          for await (const chunk of result.stream) {
+            if (aborted) break
+            const chunkText = chunk.text()
+            accumulated += chunkText
+            onChunk(chunkText, accumulated, false)
+          }
+
+          if (!aborted) {
+            onChunk('', accumulated, true)
+          }
+        } catch (error: unknown) {
+          const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+          logger.error('Gemini streaming error', error)
+          accumulated += `\n\n[Error: ${errorMessage}]`
+          onChunk(`\n\n[Error: ${errorMessage}]`, accumulated, true)
         }
-
-        if (!aborted) {
-          onChunk('', accumulated, true)
-        }
-      } catch (error: unknown) {
-        const errorMessage = error instanceof Error ? error.message : 'Unknown error'
-        logger.error('Gemini streaming error', error)
-        onChunk(`\n\n[Error: ${errorMessage}]`, accumulated, true)
-      }
-    })()
+      })()
 
     return controller
   }

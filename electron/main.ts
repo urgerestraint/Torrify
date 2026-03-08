@@ -73,7 +73,7 @@ function createWindow(): void {
     width: 1400,
     height: 900,
     webPreferences: {
-      // Points to the generated CJS preload script
+      // Vite-plugin-electron bundles the preload to the same output directory
       preload: path.join(__dirname, 'preload.cjs'),
       nodeIntegration: false,
       contextIsolation: true,
@@ -94,9 +94,13 @@ function createWindow(): void {
 
   /**
    * Security: Restrict navigation to local app origins.
+   * In development, also allow the Vite dev server URL so that HMR reloads work.
    */
+  const devServerUrl = process.env.VITE_DEV_SERVER_URL
   mainWindow.webContents.on('will-navigate', (event, url) => {
-    if (!url.startsWith('file://')) {
+    const isFile = url.startsWith('file://')
+    const isDevServer = devServerUrl ? url.startsWith(devServerUrl) : false
+    if (!isFile && !isDevServer) {
       event.preventDefault()
     }
   })
@@ -150,7 +154,7 @@ app.whenReady().then(() => {
   // Set up infrastructure and window
   ensureTempDir()
   createWindow()
-  
+
   // Register all IPC message handlers
   registerAllHandlers(() => mainWindow)
   initAutoUpdater(() => mainWindow)

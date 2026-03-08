@@ -285,6 +285,7 @@ function triggerDownload(blob: Blob, filename: string): void {
 }
 
 function sanitizeFilename(input: string | undefined, fallback: string): string {
+  // eslint-disable-next-line no-control-regex
   const cleaned = (input || '').trim().replace(/[<>:"/\\|?*\x00-\x1F]/g, '_')
   return cleaned || fallback
 }
@@ -408,6 +409,7 @@ async function startGatewayStream(streamId: string, payload: LLMRequestPayload):
     const callback = getCallback(streamId)
     if (callback) {
       const message = error instanceof Error ? error.message : 'Unknown streaming error'
+      full += `\n\n[System Error: ${message}]`
       callback(`\n\n[System Error: ${message}]`, full, true)
     }
     completeStream(streamId)
@@ -530,7 +532,7 @@ async function loadProjectFromPicker(): Promise<{ canceled: boolean; project?: L
 
 function buildWebElectronAPI(): ElectronAPI {
   return {
-    async renderScad(_code: string) {
+    async renderScad() {
       return {
         success: true,
         image: TRANSPARENT_PIXEL_DATA_URI,
@@ -595,11 +597,11 @@ function buildWebElectronAPI(): ElectronAPI {
       return { success: true }
     },
 
-    async checkOpenscadPath(_path: string) {
+    async checkOpenscadPath() {
       return true
     },
 
-    async checkPythonPath(_path: string) {
+    async checkPythonPath() {
       return { valid: false, error: 'build123d is not available in web runtime' }
     },
 
@@ -744,7 +746,7 @@ function buildWebElectronAPI(): ElectronAPI {
       return { success: true }
     },
 
-    async openRecentFile(_filePath: string) {
+    async openRecentFile() {
       return { canceled: true, error: 'Recent file reopen is not available in web runtime' }
     },
 
@@ -789,7 +791,7 @@ function buildWebElectronAPI(): ElectronAPI {
       }
     },
 
-    async updateContextFromCloud(_backend: CADBackend, _url: string) {
+    async updateContextFromCloud() {
       return { success: false, error: 'Knowledge base updates are not available in web runtime' }
     },
 
@@ -801,11 +803,11 @@ function buildWebElectronAPI(): ElectronAPI {
       return { success: false, models: [], error: 'Ollama is not available in web runtime' }
     },
 
-    onMenuEvent(_channel: string, _callback: () => void) {
+    onMenuEvent() {
       // No native menu in web runtime.
     },
 
-    removeMenuListener(_channel: string) {
+    removeMenuListener() {
       // No native menu in web runtime.
     }
   }

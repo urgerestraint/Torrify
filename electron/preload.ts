@@ -139,7 +139,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ]
     if (validChannels.includes(channel)) {
       ipcRenderer.removeAllListeners(channel)
-      ipcRenderer.on(channel, callback)
+      ipcRenderer.on(channel, () => callback())
     }
   },
 

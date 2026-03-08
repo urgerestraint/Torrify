@@ -180,55 +180,56 @@ export class GatewayService implements LLMService {
 
     let latestContent = ''
 
-    ;(async () => {
-      try {
-        const endpoint = getGatewayEndpoint()
-        const systemContent = buildSystemContent({
-          model: this.config.model,
-          cadBackend,
-          currentCode,
-          apiContext,
-          loggerPrefix: 'Gateway'
-        })
-        const payloadMessages = this.buildPayloadMessages(messages, systemContent)
-        const maxOutputTokens = this.getMaxOutputTokens(payloadMessages)
-
-        const response = await fetchWithTimeout(endpoint, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-License-Key': licenseKey
-          },
-          body: JSON.stringify({
+      ; (async () => {
+        try {
+          const endpoint = getGatewayEndpoint()
+          const systemContent = buildSystemContent({
             model: this.config.model,
-            messages: payloadMessages,
-            stream: true,
-            temperature: this.config.temperature ?? 0.7,
-            max_tokens: maxOutputTokens
-          }),
-          signal: abortController.signal
-        })
+            cadBackend,
+            currentCode,
+            apiContext,
+            loggerPrefix: 'Gateway'
+          })
+          const payloadMessages = this.buildPayloadMessages(messages, systemContent)
+          const maxOutputTokens = this.getMaxOutputTokens(payloadMessages)
 
-        if (!response.ok) {
-          const errorText = await response.text()
-          throw new Error(`Gateway error: ${errorText || response.statusText}`)
-        }
+          const response = await fetchWithTimeout(endpoint, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-License-Key': licenseKey
+            },
+            body: JSON.stringify({
+              model: this.config.model,
+              messages: payloadMessages,
+              stream: true,
+              temperature: this.config.temperature ?? 0.7,
+              max_tokens: maxOutputTokens
+            }),
+            signal: abortController.signal
+          })
 
-        const handleChunk: StreamCallback = (delta, full, done) => {
-          latestContent = full
-          onChunk(delta, full, done)
-        }
+          if (!response.ok) {
+            const errorText = await response.text()
+            throw new Error(`Gateway error: ${errorText || response.statusText}`)
+          }
 
-        await streamSseResponse(response, handleChunk, 'Gateway')
-      } catch (error: unknown) {
-        if (error instanceof Error && error.name === 'AbortError') {
-          return
+          const handleChunk: StreamCallback = (delta, full, done) => {
+            latestContent = full
+            onChunk(delta, full, done)
+          }
+
+          await streamSseResponse(response, handleChunk, 'Gateway')
+        } catch (error: unknown) {
+          if (error instanceof Error && error.name === 'AbortError') {
+            return
+          }
+          const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+          logger.error('Gateway streaming error', error)
+          latestContent += `\n\n[Error: ${errorMessage}]`
+          onChunk(`\n\n[Error: ${errorMessage}]`, latestContent, true)
         }
-        const errorMessage = error instanceof Error ? error.message : 'Unknown error'
-        logger.error('Gateway streaming error', error)
-        onChunk(`\n\n[Error: ${errorMessage}]`, latestContent, true)
-      }
-    })()
+      })()
 
     return controller
   }

@@ -58,46 +58,46 @@ function getErrorMsg(error: unknown): string {
  */
 function App() {
   // --- State Definitions ---
-  
+
   /** Current source code in the active editor */
   const [code, setCode] = useState('')
-  
+
   /** Chat message history for the AI assistant */
   const [messages, setMessages] = useState<Message[]>(() => getDefaultMessages('openscad'))
-  
+
   /** Reference for tracking unsaved changes across renders without re-triggering effects */
   const hasUnsavedChangesRef = useRef(false)
-  
+
   /** Base64 preview image (if the backend supports 2D rasterization) */
   const [previewImage, setPreviewImage] = useState<string | null>(null)
-  
+
   /** Base64-encoded STL geometry data for the 3D viewer */
   const [stlBase64, setStlBase64] = useState<string | null>(null)
-  
+
   /** Indicates if a CAD render operation is currently in progress */
   const [isRendering, setIsRendering] = useState(false)
-  
+
   /** Error message from the last failed render attempt */
   const [renderError, setRenderError] = useState<string | null>(null)
-  
+
   /** Visibility of the configuration settings modal */
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
-  
+
   /** Visibility of the first-launch onboarding modal */
   const [isWelcomeOpen, setIsWelcomeOpen] = useState(false)
-  
+
   /** Used to trigger re-renders when LLM config changes (e.g. from settings modal) */
   const [, setLlmSettings] = useState<Settings['llm'] | null>(null)
-  
+
   /** Active CAD engine context ('openscad' or 'build123d') */
   const [cadBackend, setCadBackend] = useState<CADBackend>('openscad')
-  
+
   /** Tracks gateway/openrouter key state for menu/UI; null when not applicable */
   const [, setOpenRouterKeySet] = useState<boolean | null>(null)
-  
+
   /** Key used to force-reset the Monaco editor instance (e.g. on backend switch) */
   const [editorKey, setEditorKey] = useState(0)
-  
+
   /** Monotonic counter used to trigger re-renders in components that depend on settings */
   const [settingsVersion, setSettingsVersion] = useState(0)
 
@@ -105,13 +105,13 @@ function App() {
   const [settingsInitialTab, setSettingsInitialTab] = useState<SettingsTab | null>(null)
 
   const { isProAuthenticated } = useProStatus(settingsVersion)
-  
+
   /** Active state for the global confirmation dialog */
   const [dialogState, setDialogState] = useState<DialogState | null>(null)
-  
+
   /** Queue of image data URLs waiting to be sent to the AI */
   const [pendingSnapshots, setPendingSnapshots] = useState<string[]>([])
-  
+
   /** Context for an automatic AI diagnosis of a render error */
   const [pendingDiagnosis, setPendingDiagnosis] = useState<{ readonly error: string; readonly code: string } | null>(null)
 
@@ -347,9 +347,9 @@ function App() {
             const project = result.project
             const chat: Message[] = project.chat
               ? project.chat.map((m) => ({
-                  ...m,
-                  timestamp: typeof m.timestamp === 'string' ? new Date(m.timestamp) : (m.timestamp as Date)
-                }))
+                ...m,
+                timestamp: typeof m.timestamp === 'string' ? new Date(m.timestamp) : (m.timestamp as Date)
+              }))
               : fileOps.getDefaultMessages(cadBackend)
             setCode(project.code ?? fileOps.DEFAULT_CODE)
             setMessages(chat)
@@ -556,6 +556,16 @@ function App() {
 
   const [isHelpBotOpen, setIsHelpBotOpen] = useState(false)
 
+  const handleOpenSettings = useCallback((tab?: SettingsTab | unknown) => {
+    if (typeof tab === 'string') {
+      setSettingsInitialTab(tab as SettingsTab)
+    }
+    setIsSettingsOpen(true)
+  }, [])
+
+  const handleOpenHelpBot = useCallback(() => setIsHelpBotOpen(true), [])
+  const handleShowDemo = useCallback(() => setIsDemoDialogOpen(true), [])
+
   useMenuHandlers({
     handleNewFile: fileOps.handleNewFile,
     handleOpenFile: fileOps.handleOpenFile,
@@ -565,9 +575,9 @@ function App() {
     handleExportStl,
     handleRender,
     updateLlmSettings,
-    onOpenSettings: () => setIsSettingsOpen(true),
-    onOpenHelpBot: () => setIsHelpBotOpen(true),
-    onShowDemo: () => setIsDemoDialogOpen(true)
+    onOpenSettings: handleOpenSettings,
+    onOpenHelpBot: handleOpenHelpBot,
+    onShowDemo: handleShowDemo
   })
 
   const handleSendSnapshot = useCallback((dataUrl: string) => {
@@ -612,7 +622,7 @@ function App() {
             onLoadProject={handleLoadProject}
             onExportScad={handleExportScad}
             onExportStl={handleExportStl}
-            onOpenSettings={() => setIsSettingsOpen(true)}
+            onOpenSettings={handleOpenSettings}
           />
         </div>
       </div>
@@ -641,10 +651,7 @@ function App() {
             editorKey={editorKey}
             cadBackend={cadBackend}
             isProAuthenticated={isProAuthenticated}
-            onOpenSettings={() => {
-              setSettingsInitialTab('ai')
-              setIsSettingsOpen(true)
-            }}
+            onOpenSettings={() => handleOpenSettings('ai')}
           />
         </div>
         <div className="w-[30%]">
@@ -680,7 +687,6 @@ function App() {
           setIsSettingsOpen(false)
           setSettingsInitialTab(null)
           await refreshSettings()
-          await syncWelcomeAndDemoState()
         }}
       />
 
@@ -689,7 +695,7 @@ function App() {
         onClose={() => setIsWelcomeOpen(false)}
         onOpenSettings={() => {
           setIsWelcomeOpen(false)
-          setIsSettingsOpen(true)
+          handleOpenSettings()
         }}
       />
 

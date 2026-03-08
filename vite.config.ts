@@ -4,6 +4,7 @@ import electron from 'vite-plugin-electron'
 import renderer from 'vite-plugin-electron-renderer'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
+import pkg from './package.json'
 
 // https://vitejs.dev/config/
 export default defineConfig(() => {
@@ -19,11 +20,11 @@ export default defineConfig(() => {
       alias: isWebTarget
         ? []
         : [
-            {
-              find: /^\.\/platform\/web\/electronAPI$/,
-              replacement: webApiStubPath
-            }
-          ]
+          {
+            find: /^\.\/platform\/web\/electronAPI$/,
+            replacement: webApiStubPath
+          }
+        ]
     },
     build: {
       outDir: isWebTarget ? 'dist-web' : 'dist'
@@ -34,21 +35,45 @@ export default defineConfig(() => {
         isWebTarget
           ? []
           : [
-              electron([
-                {
-                  // Main process
-                  entry: 'electron/main.ts',
-                },
-                {
-                  // Preload scripts
-                  entry: 'electron/preload.ts',
-                  onstart(options) {
-                    options.reload()
+            electron([
+              {
+                // Main process
+                entry: 'electron/main.ts',
+                vite: {
+                  build: {
+                    lib: {
+                      entry: 'electron/main.ts',
+                      formats: ['cjs'],
+                      fileName: () => 'main.cjs',
+                    },
+                    rollupOptions: {
+                      external: ['electron', ...Object.keys('dependencies' in pkg ? pkg.dependencies : {})],
+                    },
                   },
                 },
-              ]),
-              renderer(),
-            ]
+              },
+              {
+                // Preload scripts
+                entry: 'electron/preload.ts',
+                onstart(options) {
+                  options.reload()
+                },
+                vite: {
+                  build: {
+                    lib: {
+                      entry: 'electron/preload.ts',
+                      formats: ['cjs'],
+                      fileName: () => 'preload.cjs',
+                    },
+                    rollupOptions: {
+                      external: ['electron'],
+                    },
+                  },
+                },
+              },
+            ]),
+            renderer(),
+          ]
       ),
     ],
     server: {

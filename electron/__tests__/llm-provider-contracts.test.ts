@@ -4,6 +4,7 @@ import { GeminiService } from '../llm/GeminiService'
 import { OllamaService } from '../llm/OllamaService'
 import { OpenAIService } from '../llm/OpenAIService'
 import { OpenRouterService } from '../llm/OpenRouterService'
+import { CustomService } from '../llm/CustomService'
 import type { LLMConfig, LLMMessage } from '../llm/types'
 
 const { gemini } = vi.hoisted(() => ({
@@ -243,5 +244,80 @@ describe('LLM provider contracts', () => {
       ])
     )
     expect(result.content).toBe('gemini-ok')
+  })
+
+  it('CustomService uses custom endpoint and optional auth header', async () => {
+    fetchMock.mockResolvedValue(
+      jsonResponse({
+        choices: [{ message: { content: 'custom-ok' } }],
+        usage: { prompt_tokens: 10, completion_tokens: 20, total_tokens: 30 }
+      })
+    )
+
+    // Test with API key
+    const serviceWithKey = new CustomService(
+      makeConfig('custom', { customEndpoint: 'http://localhost:1234/v1', apiKey: 'custom-key' })
+    )
+    const resultWithKey = await serviceWithKey.sendMessage(baseMessages)
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      'http://localhost:1234/v1/chat/completions',
+      expect.objectContaining({
+        headers: expect.objectContaining({
+          Authorization: 'Bearer custom-key',
+          'Content-Type': 'application/json',
+          'Accept': 'text/event-stream'
+        })
+      })
+    )
+    expect(resultWithKey.content).toBe('custom-ok')
+
+    fetchMock.mockClear()
+
+    // Test without API key
+    const serviceNoKey = new CustomService(
+      makeConfig('custom', { customEndpoint: 'http://localhost:1234/v1', apiKey: '' })
+    )
+    await serviceNoKey.sendMessage(baseMessages)
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      'http://localhost:1234/v1/chat/completions',
+      expect.objectContaining({
+        headers: expect.objectContaining({
+          'Content-Type': 'application/json',
+          'Accept': 'text/event-stream'
+        })
+      })
+    )
+    const options = fetchMock.mock.calls[0][1] as RequestInit
+    expect(options.headers).not.toHaveProperty('Authorization')
+  })
+
+  it('CustomService streaming surfaces SSE chunks correctly', async () => {
+    fetchMock.mockResolvedValue(
+      streamResponse([
+        'data: {"choices":[{"delta":{"content":"cust"}}]}\n\n',
+        'data: {"choices":[{"delta":{"content":"om"}}]}\n\n',
+        'data: [DONE]\n\n'
+      ])
+    )
+
+    const service = new CustomService(
+      makeConfig('custom', { customEndpoint: 'http://localhost:1234/v1' })
+    )
+    const seen: Array<{ delta: string; full: string; done: boolean }> = []
+
+    await new Promise<void>((resolve, reject) => {
+      void service
+        .streamMessage(baseMessages, (delta, full, done) => {
+          seen.push({ delta, full, done })
+          if (done) resolve()
+        })
+        .catch(reject)
+    })
+
+    expect(seen[0]).toEqual({ delta: 'cust', full: 'cust', done: false })
+    expect(seen[1]).toEqual({ delta: 'om', full: 'custom', done: false })
+    expect(seen.at(-1)).toEqual({ delta: '', full: 'custom', done: true })
   })
 })

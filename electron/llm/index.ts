@@ -10,16 +10,17 @@ import { OpenAIService } from './OpenAIService'
 import { OpenRouterService } from './OpenRouterService'
 import { OllamaService } from './OllamaService'
 import { GatewayService } from './GatewayService'
+import { CustomService } from './CustomService'
 
-export type { 
-  LLMService, 
-  LLMConfig, 
-  LLMProvider, 
-  LLMMessage, 
-  LLMResponse, 
-  CADBackend, 
-  StreamCallback, 
-  StreamController 
+export type {
+  LLMService,
+  LLMConfig,
+  LLMProvider,
+  LLMMessage,
+  LLMResponse,
+  CADBackend,
+  StreamCallback,
+  StreamController
 } from './types'
 
 /** 
@@ -27,9 +28,9 @@ export type {
  * specialized headers (e.g. gateway license).
  */
 const PROVIDERS_WITHOUT_API_KEY: readonly LLMProvider[] = [
-  'openrouter', 
-  'ollama', 
-  'custom', 
+  'openrouter',
+  'ollama',
+  'custom',
   'gateway'
 ] as const
 
@@ -67,7 +68,7 @@ export function createLLMService(config: LLMConfig): LLMService {
     case 'anthropic':
       throw new Error('Anthropic provider not yet implemented')
     case 'custom':
-      throw new Error('Custom provider not yet implemented')
+      return new CustomService(config)
     case 'openrouter':
       return new OpenRouterService(config)
     case 'gateway':

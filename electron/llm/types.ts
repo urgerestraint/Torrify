@@ -12,9 +12,6 @@ export type LLMProvider = 'gemini' | 'openai' | 'anthropic' | 'custom' | 'openro
 /** Supported CAD backends used for prompt context */
 export type CADBackend = 'openscad' | 'build123d'
 
-/**
- * Configuration for an LLM service instance.
- */
 export interface LLMConfig {
   readonly provider: LLMProvider
   readonly model: string
@@ -25,6 +22,7 @@ export interface LLMConfig {
   readonly maxTokens?: number
   readonly gatewayBaseUrl?: string
   readonly gatewayLicenseKey?: string
+  readonly customTimeout?: number
 }
 
 /**
@@ -73,9 +71,9 @@ export interface LLMService {
    * Sends a synchronous message request and waits for completion.
    */
   sendMessage(
-    messages: LLMMessage[], 
-    currentCode?: string, 
-    cadBackend?: CADBackend, 
+    messages: LLMMessage[],
+    currentCode?: string,
+    cadBackend?: CADBackend,
     apiContext?: string
   ): Promise<LLMResponse>
 

@@ -66,6 +66,7 @@ function SettingsModal({ isOpen, onClose, initialTab }: SettingsModalProps) {
   )
 
   useEffect(() => {
+    isMountedRef.current = true
     return () => {
       isMountedRef.current = false
     }
@@ -135,20 +136,25 @@ function SettingsModal({ isOpen, onClose, initialTab }: SettingsModalProps) {
         }
         await window.electronAPI.saveSettings(loadedSettings)
       }
+
+      // Immediately set settings to unblock the modal rendering.
+      if (isMountedRef.current) {
+        setSettings(loadedSettings)
+      }
+
       const [nextPathValid, nextPythonPathValid, nextBackendValidation] = managedWebMode
         ? [true, null, { valid: true, version: 'OpenSCAD Web Runtime' }]
         : await Promise.all([
-            resolvePathValid(loadedSettings.openscadPath),
-            resolvePythonPathValid(loadedSettings.build123dPythonPath),
-            resolveBackendValidation(loadedSettings.cadBackend)
-          ])
+          resolvePathValid(loadedSettings.openscadPath),
+          resolvePythonPathValid(loadedSettings.build123dPythonPath),
+          resolveBackendValidation(loadedSettings.cadBackend)
+        ])
       if (!isMountedRef.current) {
         return
       }
       setPathValid(nextPathValid)
       setPythonPathValid(nextPythonPathValid)
       setBackendValidation(nextBackendValidation)
-      setSettings(loadedSettings)
     } catch (error) {
       logger.error('Failed to load settings', error)
     }
@@ -165,16 +171,19 @@ function SettingsModal({ isOpen, onClose, initialTab }: SettingsModalProps) {
     }
   }, [])
 
+  // Set initial tab once when opening from a closed state
   useEffect(() => {
     if (isOpen) {
       void loadSettings()
       if (initialTab && availableTabs.includes(initialTab)) {
         setActiveTab(initialTab)
-      } else if (!availableTabs.includes(activeTab)) {
-        setActiveTab(availableTabs[0])
+      } else {
+        setActiveTab(prev => availableTabs.includes(prev) ? prev : availableTabs[0])
       }
     }
-  }, [activeTab, availableTabs, initialTab, isOpen, loadSettings])
+    // Only run when isOpen transitions to true, or the specific initialTab prop changes
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, initialTab, availableTabs, loadSettings])
 
   useEffect(() => {
     if (isOpen && activeTab === 'knowledge') {
@@ -401,15 +410,15 @@ function SettingsModal({ isOpen, onClose, initialTab }: SettingsModalProps) {
     }
     const normalizedSettings = managedWebMode
       ? {
-          ...settings,
-          cadBackend: 'openscad' as const,
-          llm: {
-            ...settings.llm,
-            provider: 'gateway' as const,
-            apiKey: '',
-            model: settings.llm.model || DEFAULT_MODELS.gateway
-          }
+        ...settings,
+        cadBackend: 'openscad' as const,
+        llm: {
+          ...settings.llm,
+          provider: 'gateway' as const,
+          apiKey: '',
+          model: settings.llm.model || DEFAULT_MODELS.gateway
         }
+      }
       : settings
 
     setIsSaving(true)
@@ -486,9 +495,8 @@ function SettingsModal({ isOpen, onClose, initialTab }: SettingsModalProps) {
               key={tab}
               onClick={() => setActiveTab(tab)}
               onKeyDown={(e) => handleTabKeyDown(e, tab)}
-              className={`px-6 py-3 font-medium transition-colors ${
-                activeTab === tab ? 'text-blue-400 border-b-2 border-blue-400' : 'text-gray-400 hover:text-gray-300'
-              }`}
+              className={`px-6 py-3 font-medium transition-colors ${activeTab === tab ? 'text-blue-400 border-b-2 border-blue-400' : 'text-gray-400 hover:text-gray-300'
+                }`}
               role="tab"
               id={`settings-tab-${tab}`}
               aria-controls={`settings-panel-${tab}`}
@@ -539,9 +547,8 @@ function SettingsModal({ isOpen, onClose, initialTab }: SettingsModalProps) {
 
           {saveMessage && (
             <div
-              className={`p-3 rounded ${
-                saveMessage.includes('success') ? 'bg-green-900/30 text-green-400' : 'bg-red-900/30 text-red-400'
-              }`}
+              className={`p-3 rounded ${saveMessage.includes('success') ? 'bg-green-900/30 text-green-400' : 'bg-red-900/30 text-red-400'
+                }`}
             >
               {saveMessage}
             </div>

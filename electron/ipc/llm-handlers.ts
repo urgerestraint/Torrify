@@ -83,7 +83,7 @@ export function registerLlmHandlers(getMainWindow: () => BrowserWindow | null): 
       try {
         const settings = getCurrentSettings()
         const service = createLLMService(settings.llm)
-        
+
         if (!service.streamMessage) {
           throw new Error(`Provider ${service.getProviderName()} does not support streaming`)
         }
@@ -107,10 +107,11 @@ export function registerLlmHandlers(getMainWindow: () => BrowserWindow | null): 
       } catch (error: unknown) {
         const currentWin = getMainWindow()
         if (currentWin) {
+          const errorMessage = `\n\n[System Error: ${getErrorMessage(error)}]`
           currentWin.webContents.send('llm-stream-chunk', {
             streamId,
-            delta: `\n\n[System Error: ${getErrorMessage(error)}]`,
-            full: '',
+            delta: errorMessage,
+            full: errorMessage,
             done: true
           })
         }

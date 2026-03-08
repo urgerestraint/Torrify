@@ -160,6 +160,7 @@ export class OpenRouterService implements LLMService {
         }
         const errorMessage = error instanceof Error ? error.message : 'Unknown error'
         logger.error('OpenRouter streaming error', error)
+        latestContent += `\n\n[Error: ${errorMessage}]`
         onChunk(`\n\n[Error: ${errorMessage}]`, latestContent, true)
       }
     })()

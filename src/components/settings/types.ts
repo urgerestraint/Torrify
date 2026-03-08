@@ -14,8 +14,8 @@ export interface LLMConfig {
   readonly customEndpoint?: string
   readonly temperature?: number
   readonly maxTokens?: number
-  readonly gatewayBaseUrl?: string
   readonly gatewayLicenseKey?: string
+  readonly customTimeout?: number
 }
 
 /**
@@ -49,16 +49,16 @@ export type SettingsTab = 'general' | 'ai' | 'knowledge'
  */
 export interface ContextStatusInfo {
   /** User-provided overrides */
-  readonly user: { 
+  readonly user: {
     readonly exists: boolean
     readonly size: number
-    readonly modified: string | null 
+    readonly modified: string | null
   }
   /** Bundled reference documentation */
-  readonly bundled: { 
+  readonly bundled: {
     readonly exists: boolean
     readonly size: number
-    readonly modified: string | null 
+    readonly modified: string | null
   }
   /** Indicates which version is currently being served to the LLM */
   readonly active: 'user' | 'bundled'

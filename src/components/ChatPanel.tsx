@@ -99,9 +99,9 @@ const extractCodeFromResponse = (text: string, backend: CADBackend = 'openscad')
   // Use backend-specific tag and language identifier
   const tagName = backend === 'openscad' ? 'openscad' : 'python'
   const fenceLangs = backend === 'openscad' ? ['openscad', 'scad'] : ['python', 'py', 'build123d']
-  
+
   const tagRegex = new RegExp(`<${tagName}>([\\s\\S]*?)<\\/${tagName}>`, 'gi')
-  
+
   // 1. Try to extract from custom XML-style tags
   while ((match = tagRegex.exec(text)) !== null) {
     const chunk = match[1].trim()
@@ -112,22 +112,22 @@ const extractCodeFromResponse = (text: string, backend: CADBackend = 'openscad')
 
   // Determine the descriptive part of the message (outside of tags)
   const assistantMatch = text.match(/<assistant>([\s\S]*?)<\/assistant>/i)
-  let cleanedText = assistantMatch 
-    ? assistantMatch[1].trim() 
+  let cleanedText = assistantMatch
+    ? assistantMatch[1].trim()
     : text.replace(tagRegex, '').trim()
 
   // 2. Fallback to standard Markdown triple-backtick fences if no tags found
   if (codeChunks.length === 0) {
     const langPattern = fenceLangs.join('|')
     const fencedRegex = new RegExp(`\`\`\`(?:${langPattern})\\s*([\\s\\S]*?)\`\`\``, 'gi')
-    
+
     while ((match = fencedRegex.exec(text)) !== null) {
       const chunk = match[1].trim()
       if (chunk) {
         codeChunks.push(chunk)
       }
     }
-    
+
     if (!assistantMatch) {
       cleanedText = cleanedText.replace(fencedRegex, '').trim()
     }
@@ -140,15 +140,15 @@ const extractCodeFromResponse = (text: string, backend: CADBackend = 'openscad')
       const cleaned = stripCodeTags(truncatedMatch[1], backend)
       if (cleaned) {
         codeChunks.push(cleaned)
-        logger.debug(`[ChatPanel] Extracted code from truncated response (no closing </${tagName}>)`, { 
-          length: cleaned.length 
+        logger.debug(`[ChatPanel] Extracted code from truncated response (no closing </${tagName}>)`, {
+          length: cleaned.length
         })
       }
     }
   }
 
   const combinedCode = codeChunks.length > 0 ? `${codeChunks.join('\n\n')}\n` : null
-  
+
   return {
     code: combinedCode,
     message: cleanedText,
@@ -162,17 +162,17 @@ const extractCodeFromResponse = (text: string, backend: CADBackend = 'openscad')
  * @param props - Component properties (see ChatPanelProps)
  * @returns The rendered chat interface
  */
-function ChatPanel({ 
-  currentCode, 
-  pendingSnapshots, 
-  onSnapshotsSent, 
-  onApplyCode, 
-  messages, 
-  setMessages, 
-  cadBackend = 'openscad', 
-  pendingDiagnosis, 
-  onDiagnosisSent, 
-  settingsVersion = 0 
+function ChatPanel({
+  currentCode,
+  pendingSnapshots,
+  onSnapshotsSent,
+  onApplyCode,
+  messages,
+  setMessages,
+  cadBackend = 'openscad',
+  pendingDiagnosis,
+  onDiagnosisSent,
+  settingsVersion = 0
 }: ChatPanelProps) {
   const managedWebMode = isWebRuntime()
   const [input, setInput] = useState('')
@@ -188,7 +188,7 @@ function ChatPanel({
   const streamControllerRef = useRef<StreamController | null>(null)
   const streamingMessageIdRef = useRef<number | null>(null)
   const onApplyCodeRef = useRef(onApplyCode)
-  const sendToLlmRef = useRef<(userInput: string, imageDataUrls?: string[]) => Promise<void>>(async () => {})
+  const sendToLlmRef = useRef<(userInput: string, imageDataUrls?: string[]) => Promise<void>>(async () => { })
   onApplyCodeRef.current = onApplyCode
 
   // Handle file selection for image import
@@ -198,7 +198,7 @@ function ChatPanel({
 
     Array.from(files).forEach(file => {
       if (!file.type.startsWith('image/')) return
-      
+
       const reader = new FileReader()
       reader.onload = () => {
         const dataUrl = reader.result as string
@@ -284,7 +284,7 @@ function ChatPanel({
       const processDiagnosis = async () => {
         const backendName = cadBackend === 'build123d' ? 'build123d (Python)' : 'OpenSCAD'
         const codeBlockLang = cadBackend === 'build123d' ? 'python' : 'openscad'
-        
+
         const diagnosisText = `I got this error when trying to render my ${backendName} code. Please help me understand and fix the error.
 
 **Error:**
@@ -304,12 +304,12 @@ ${pendingDiagnosis.code}
           timestamp: new Date()
         }
         setMessages(prev => [...prev, userMessage])
-        
+
         onDiagnosisSent?.()
-        
+
         await sendToLlmRef.current(diagnosisText)
       }
-      
+
       void processDiagnosis().catch((error) => {
         logger.error('Failed to process automatic diagnosis request', error)
       })
@@ -365,7 +365,7 @@ ${pendingDiagnosis.code}
   const sendToLlm = useCallback(async (userInput: string, imageDataUrls?: string[]) => {
     try {
       const settings = await window.electronAPI.getSettings()
-      
+
       if (!settings.llm.enabled) {
         throw new Error('AI is disabled. Enable it in Settings.')
       }
@@ -404,7 +404,7 @@ ${pendingDiagnosis.code}
       if (llmService.supportsStreaming() && llmService.streamMessage) {
         const streamingMessageId = Date.now() + 1
         streamingMessageIdRef.current = streamingMessageId
-        
+
         const streamingMessage: Message = {
           id: streamingMessageId,
           text: '',
@@ -434,20 +434,23 @@ ${pendingDiagnosis.code}
               }
 
               // Finalize the streaming message with cleaned text (explanation only)
-              setMessages(prev => prev.map(m => 
-                m.id === streamingMessageId 
-                  ? { ...m, text: extracted.message || accumulated, isStreaming: false }
+              const finalContent = extracted.message || accumulated
+              const isWatchdogError = finalContent.includes('[System Error:')
+
+              setMessages(prev => prev.map(m =>
+                m.id === streamingMessageId
+                  ? { ...m, text: finalContent, isStreaming: false, error: isWatchdogError }
                   : m
               ))
-              
+
               setIsLoading(false)
               if (imageDataUrls && imageDataUrls.length > 0) {
                 onSnapshotsSent?.()
               }
             } else {
               // Update UI with partial response
-              setMessages(prev => prev.map(m => 
-                m.id === streamingMessageId 
+              setMessages(prev => prev.map(m =>
+                m.id === streamingMessageId
                   ? { ...m, text: accumulated }
                   : m
               ))
@@ -457,14 +460,14 @@ ${pendingDiagnosis.code}
           cadBackend,
           includeContext ? apiContext : undefined
         )
-        
+
         streamControllerRef.current = controller
       } else {
         // Handle non-streaming providers (e.g. standard API calls)
         const response = await llmService.sendMessage(
-          llmMessages, 
-          currentCode, 
-          cadBackend, 
+          llmMessages,
+          currentCode,
+          cadBackend,
           includeContext ? apiContext : undefined
         )
 
@@ -483,7 +486,7 @@ ${pendingDiagnosis.code}
           }
           setMessages(prev => [...prev, botMessage])
         }
-        
+
         setIsLoading(false)
         if (imageDataUrls && imageDataUrls.length > 0) {
           onSnapshotsSent?.()
@@ -535,7 +538,7 @@ ${pendingDiagnosis.code}
 
     setMessages(prev => [...prev, userMessage])
     setStagedImages([])
-    
+
     await sendToLlm(userInput, hasImages ? allImages : undefined)
   }
 
@@ -547,16 +550,16 @@ ${pendingDiagnosis.code}
       streamControllerRef.current.abort()
       streamControllerRef.current = null
     }
-    
+
     if (streamingMessageIdRef.current) {
-      setMessages(prev => prev.map(m => 
-        m.id === streamingMessageIdRef.current 
+      setMessages(prev => prev.map(m =>
+        m.id === streamingMessageIdRef.current
           ? { ...m, isStreaming: false, text: m.text + '\n\n[Stopped]' }
           : m
       ))
       streamingMessageIdRef.current = null
     }
-    
+
     setIsStreaming(false)
     setIsLoading(false)
   }, [setMessages])
@@ -605,13 +608,12 @@ ${pendingDiagnosis.code}
             className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'}`}
           >
             <div
-              className={`max-w-[80%] rounded-lg px-4 py-2 ${
-                message.sender === 'user'
+              className={`max-w-[80%] rounded-lg px-4 py-2 ${message.sender === 'user'
                   ? 'bg-blue-600 text-white'
                   : message.error
-                  ? 'bg-red-900/30 text-red-300 border border-red-700'
-                  : 'bg-[#2d2d30] text-gray-200'
-              }`}
+                    ? 'bg-red-900/30 text-red-300 border border-red-700'
+                    : 'bg-[#2d2d30] text-gray-200'
+                }`}
             >
               {/* Display attached images */}
               {message.imageDataUrls && message.imageDataUrls.length > 0 && (
@@ -682,7 +684,7 @@ ${pendingDiagnosis.code}
             ))}
           </div>
         )}
-        
+
         {/* Hidden file input */}
         <input
           ref={fileInputRef}
@@ -692,7 +694,7 @@ ${pendingDiagnosis.code}
           onChange={handleFileSelect}
           className="hidden"
         />
-        
+
         <div className="flex justify-end mb-2 px-1">
           <label className="flex items-center gap-2 text-xs text-gray-400 cursor-pointer hover:text-gray-300 select-none">
             <input
@@ -704,7 +706,7 @@ ${pendingDiagnosis.code}
             <span>Include API Context {cadBackend === 'build123d' ? '(~27KB)' : '(~2.5KB)'}</span>
           </label>
         </div>
-        
+
         <div className="flex gap-2">
           <button
             onClick={() => fileInputRef.current?.click()}

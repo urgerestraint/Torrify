@@ -106,21 +106,19 @@ export function AISettings({
           <div className="flex gap-2">
             <button
               onClick={() => onAccessModeChange('byok')}
-              className={`px-3 py-2 rounded text-sm border ${
-                settings.llm.provider === 'gateway'
+              className={`px-3 py-2 rounded text-sm border ${settings.llm.provider === 'gateway'
                   ? 'border-[#3e3e42] text-gray-400'
                   : 'border-blue-500 text-blue-300 bg-blue-500/10'
-              }`}
+                }`}
             >
               BYOK
             </button>
             <button
               onClick={() => onAccessModeChange('pro')}
-              className={`px-3 py-2 rounded text-sm border ${
-                settings.llm.provider === 'gateway'
+              className={`px-3 py-2 rounded text-sm border ${settings.llm.provider === 'gateway'
                   ? 'border-blue-500 text-blue-300 bg-blue-500/10'
                   : 'border-[#3e3e42] text-gray-400'
-              }`}
+                }`}
             >
               PRO
             </button>
@@ -159,14 +157,12 @@ export function AISettings({
         </div>
         <button
           onClick={() => onLLMChange('enabled', !settings.llm.enabled)}
-          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-            settings.llm.enabled ? 'bg-blue-600' : 'bg-gray-600'
-          }`}
+          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${settings.llm.enabled ? 'bg-blue-600' : 'bg-gray-600'
+            }`}
         >
           <span
-            className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-              settings.llm.enabled ? 'translate-x-6' : 'translate-x-1'
-            }`}
+            className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${settings.llm.enabled ? 'translate-x-6' : 'translate-x-1'
+              }`}
           />
         </button>
       </div>
@@ -219,33 +215,15 @@ export function AISettings({
       {/* Model Name */}
       {!managedGatewayMode ? (
         <div>
-        <label className="block text-sm font-medium text-gray-300 mb-2">Model</label>
-        {settings.llm.provider === 'openrouter' || settings.llm.provider === 'gateway' ? (
-          <select
-            value={settings.llm.model}
-            onChange={(e) => onLLMChange('model', e.target.value)}
-            disabled={!settings.llm.enabled}
-            className="w-full bg-[#1e1e1e] text-white px-3 py-2 rounded border border-[#3e3e42] focus:outline-none focus:border-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {PRO_MODEL_GROUPS.map((group) => (
-              <optgroup key={group.label} label={group.label}>
-                {group.options.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </optgroup>
-            ))}
-          </select>
-        ) : settings.llm.provider === 'openai' ? (
-          <>
+          <label className="block text-sm font-medium text-gray-300 mb-2">Model</label>
+          {settings.llm.provider === 'openrouter' || settings.llm.provider === 'gateway' ? (
             <select
               value={settings.llm.model}
               onChange={(e) => onLLMChange('model', e.target.value)}
               disabled={!settings.llm.enabled}
               className="w-full bg-[#1e1e1e] text-white px-3 py-2 rounded border border-[#3e3e42] focus:outline-none focus:border-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {OPENAI_MODEL_GROUPS.map((group) => (
+              {PRO_MODEL_GROUPS.map((group) => (
                 <optgroup key={group.label} label={group.label}>
                   {group.options.map((option) => (
                     <option key={option.value} value={option.value}>
@@ -255,84 +233,102 @@ export function AISettings({
                 </optgroup>
               ))}
             </select>
-            <p className="text-xs text-gray-500 mt-1">Direct OpenAI API models. GPT-5.2 recommended for coding.</p>
-          </>
-        ) : settings.llm.provider === 'ollama' && ollamaModels.length > 0 ? (
-          <>
-            <select
-              value={settings.llm.model}
-              onChange={(e) => onLLMChange('model', e.target.value)}
-              disabled={!settings.llm.enabled || isLoadingOllamaModels}
-              className="w-full bg-[#1e1e1e] text-white px-3 py-2 rounded border border-[#3e3e42] focus:outline-none focus:border-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {ollamaModels.map((model) => (
-                <option key={model.name} value={model.name}>
-                  {model.name} {model.size > 0 ? `(${(model.size / 1024 / 1024 / 1024).toFixed(1)} GB)` : ''}
-                </option>
-              ))}
-            </select>
-            {isLoadingOllamaModels && <p className="text-xs text-gray-500 mt-1">Loading models...</p>}
-            {ollamaModelsError && (
-              <p className="text-xs text-yellow-400 mt-1">⚠️ {ollamaModelsError}</p>
-            )}
-            <p className="text-xs text-gray-500 mt-1">
-              {ollamaModels.length} model{ollamaModels.length !== 1 ? 's' : ''} available
-            </p>
-          </>
-        ) : (
-          <>
-            <input
-              type="text"
-              value={settings.llm.model}
-              onChange={(e) => onLLMChange('model', e.target.value)}
-              disabled={!settings.llm.enabled}
-              className="w-full bg-[#1e1e1e] text-white px-3 py-2 rounded border border-[#3e3e42] focus:outline-none focus:border-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
-              placeholder={settings.llm.provider === 'ollama' ? 'gpt-oss:20b' : settings.llm.provider === 'gemini' ? 'gemini-3-flash' : 'e.g. claude-3-5-sonnet-20241022'}
-            />
-            {settings.llm.provider === 'ollama' && (
-              <div className="mt-1">
-                {isLoadingOllamaModels && (
-                  <p className="text-xs text-gray-500">Loading models from Ollama...</p>
-                )}
-                {ollamaModelsError && (
-                  <div className="flex items-center gap-2">
-                    <p className="text-xs text-yellow-400 flex-1">⚠️ {ollamaModelsError}</p>
-                    <button
-                      type="button"
-                      onClick={() => onLoadOllamaModels(settings.llm.customEndpoint)}
-                      disabled={isLoadingOllamaModels}
-                      className="text-xs px-2 py-1 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded"
-                    >
-                      Retry
-                    </button>
-                  </div>
-                )}
-                {!isLoadingOllamaModels && !ollamaModelsError && ollamaModels.length === 0 && (
-                  <div className="flex items-center gap-2">
-                    <p className="text-xs text-gray-500 flex-1">
-                      Enter model name manually or check Ollama connection
-                    </p>
-                    <button
-                      type="button"
-                      onClick={() => onLoadOllamaModels(settings.llm.customEndpoint)}
-                      disabled={isLoadingOllamaModels}
-                      className="text-xs px-2 py-1 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded"
-                    >
-                      Load Models
-                    </button>
-                  </div>
-                )}
-              </div>
-            )}
-            <p className="text-xs text-gray-500 mt-1">
-              {settings.llm.provider === 'gemini' && 'Examples: gemini-3-flash, gemini-3-pro'}
-              {settings.llm.provider === 'anthropic' && 'Examples: claude-3-5-sonnet-20241022'}
-              {settings.llm.provider === 'custom' && 'Enter your custom model identifier'}
-              {settings.llm.provider === 'ollama' && ollamaModels.length === 0 && 'Examples: gpt-oss:20b, llama2, mistral'}
-            </p>
-          </>
-        )}
-      </div>
+          ) : settings.llm.provider === 'openai' ? (
+            <>
+              <select
+                value={settings.llm.model}
+                onChange={(e) => onLLMChange('model', e.target.value)}
+                disabled={!settings.llm.enabled}
+                className="w-full bg-[#1e1e1e] text-white px-3 py-2 rounded border border-[#3e3e42] focus:outline-none focus:border-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {OPENAI_MODEL_GROUPS.map((group) => (
+                  <optgroup key={group.label} label={group.label}>
+                    {group.options.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </optgroup>
+                ))}
+              </select>
+              <p className="text-xs text-gray-500 mt-1">Direct OpenAI API models. GPT-5.2 recommended for coding.</p>
+            </>
+          ) : settings.llm.provider === 'ollama' && ollamaModels.length > 0 ? (
+            <>
+              <select
+                value={settings.llm.model}
+                onChange={(e) => onLLMChange('model', e.target.value)}
+                disabled={!settings.llm.enabled || isLoadingOllamaModels}
+                className="w-full bg-[#1e1e1e] text-white px-3 py-2 rounded border border-[#3e3e42] focus:outline-none focus:border-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {ollamaModels.map((model) => (
+                  <option key={model.name} value={model.name}>
+                    {model.name} {model.size > 0 ? `(${(model.size / 1024 / 1024 / 1024).toFixed(1)} GB)` : ''}
+                  </option>
+                ))}
+              </select>
+              {isLoadingOllamaModels && <p className="text-xs text-gray-500 mt-1">Loading models...</p>}
+              {ollamaModelsError && (
+                <p className="text-xs text-yellow-400 mt-1">⚠️ {ollamaModelsError}</p>
+              )}
+              <p className="text-xs text-gray-500 mt-1">
+                {ollamaModels.length} model{ollamaModels.length !== 1 ? 's' : ''} available
+              </p>
+            </>
+          ) : (
+            <>
+              <input
+                type="text"
+                value={settings.llm.model}
+                onChange={(e) => onLLMChange('model', e.target.value)}
+                disabled={!settings.llm.enabled}
+                className="w-full bg-[#1e1e1e] text-white px-3 py-2 rounded border border-[#3e3e42] focus:outline-none focus:border-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                placeholder={settings.llm.provider === 'ollama' ? 'gpt-oss:20b' : settings.llm.provider === 'gemini' ? 'gemini-3-flash' : 'e.g. claude-3-5-sonnet-20241022'}
+              />
+              {settings.llm.provider === 'ollama' && (
+                <div className="mt-1">
+                  {isLoadingOllamaModels && (
+                    <p className="text-xs text-gray-500">Loading models from Ollama...</p>
+                  )}
+                  {ollamaModelsError && (
+                    <div className="flex items-center gap-2">
+                      <p className="text-xs text-yellow-400 flex-1">⚠️ {ollamaModelsError}</p>
+                      <button
+                        type="button"
+                        onClick={() => onLoadOllamaModels(settings.llm.customEndpoint)}
+                        disabled={isLoadingOllamaModels}
+                        className="text-xs px-2 py-1 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded"
+                      >
+                        Retry
+                      </button>
+                    </div>
+                  )}
+                  {!isLoadingOllamaModels && !ollamaModelsError && ollamaModels.length === 0 && (
+                    <div className="flex items-center gap-2">
+                      <p className="text-xs text-gray-500 flex-1">
+                        Enter model name manually or check Ollama connection
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => onLoadOllamaModels(settings.llm.customEndpoint)}
+                        disabled={isLoadingOllamaModels}
+                        className="text-xs px-2 py-1 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded"
+                      >
+                        Load Models
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+              <p className="text-xs text-gray-500 mt-1">
+                {settings.llm.provider === 'gemini' && 'Examples: gemini-3-flash, gemini-3-pro'}
+                {settings.llm.provider === 'anthropic' && 'Examples: claude-3-5-sonnet-20241022'}
+                {settings.llm.provider === 'custom' && 'Enter your custom model identifier'}
+                {settings.llm.provider === 'ollama' && ollamaModels.length === 0 && 'Examples: gpt-oss:20b, llama2, mistral'}
+              </p>
+            </>
+          )}
+        </div>
       ) : (
         <div>
           <label className="block text-sm font-medium text-gray-300 mb-2">Model</label>
@@ -421,6 +417,21 @@ export function AISettings({
           />
           <p className="text-xs text-gray-500 mt-1">Response length limit</p>
         </div>
+        {(settings.llm.provider === 'custom' || settings.llm.provider === 'ollama') && (
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-2">Stream Timeout (sec)</label>
+            <input
+              type="number"
+              min="1"
+              max="3600"
+              value={settings.llm.customTimeout ?? 60}
+              onChange={(e) => onLLMChange('customTimeout', parseInt(e.target.value))}
+              disabled={!settings.llm.enabled}
+              className="w-full bg-[#1e1e1e] text-white px-3 py-2 rounded border border-[#3e3e42] focus:outline-none focus:border-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+            />
+            <p className="text-xs text-gray-500 mt-1">60s default for local models</p>
+          </div>
+        )}
       </div>
     </div>
   )

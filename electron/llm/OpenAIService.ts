@@ -35,7 +35,7 @@ export class OpenAIService implements LLMService {
     const systemContentStr = typeof systemContent === 'string'
       ? systemContent
       : systemContent.map((part) => part.text).join('')
-      
+
     return [
       { role: 'system', content: systemContentStr },
       ...messages.map((message) => ({
@@ -55,9 +55,9 @@ export class OpenAIService implements LLMService {
    * @returns Final completion response and usage metrics
    */
   async sendMessage(
-    messages: LLMMessage[], 
-    currentCode?: string, 
-    cadBackend: CADBackend = 'openscad', 
+    messages: LLMMessage[],
+    currentCode?: string,
+    cadBackend: CADBackend = 'openscad',
     apiContext?: string
   ): Promise<LLMResponse> {
     if (!messages || messages.length === 0) {
@@ -140,54 +140,55 @@ export class OpenAIService implements LLMService {
 
     let latestContent = ''
 
-    // Background stream processing
-    ;(async () => {
-      try {
-        const systemContent = buildSystemContent({
-          model: this.config.model,
-          cadBackend,
-          currentCode,
-          apiContext,
-          loggerPrefix: 'OpenAI'
-        })
-        const payloadMessages = this.buildPayloadMessages(messages, systemContent)
-
-        const response = await fetchWithTimeout(OPENAI_ENDPOINT, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${this.config.apiKey}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
+      // Background stream processing
+      ; (async () => {
+        try {
+          const systemContent = buildSystemContent({
             model: this.config.model,
-            messages: payloadMessages,
-            temperature: this.config.temperature ?? 0.7,
-            max_tokens: this.config.maxTokens ?? 128000,
-            stream: true,
-          }),
-          signal: abortController.signal
-        })
+            cadBackend,
+            currentCode,
+            apiContext,
+            loggerPrefix: 'OpenAI'
+          })
+          const payloadMessages = this.buildPayloadMessages(messages, systemContent)
 
-        if (!response.ok) {
-          const errorText = await response.text()
-          throw new Error(`OpenAI error: ${errorText || response.statusText}`)
-        }
+          const response = await fetchWithTimeout(OPENAI_ENDPOINT, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${this.config.apiKey}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              model: this.config.model,
+              messages: payloadMessages,
+              temperature: this.config.temperature ?? 0.7,
+              max_tokens: this.config.maxTokens ?? 128000,
+              stream: true,
+            }),
+            signal: abortController.signal
+          })
 
-        const handleChunk: StreamCallback = (delta, full, done) => {
-          latestContent = full
-          onChunk(delta, full, done)
-        }
+          if (!response.ok) {
+            const errorText = await response.text()
+            throw new Error(`OpenAI error: ${errorText || response.statusText}`)
+          }
 
-        await streamSseResponse(response, handleChunk, 'OpenAI')
-      } catch (error: unknown) {
-        if (error instanceof Error && error.name === 'AbortError') {
-          return
+          const handleChunk: StreamCallback = (delta, full, done) => {
+            latestContent = full
+            onChunk(delta, full, done)
+          }
+
+          await streamSseResponse(response, handleChunk, 'OpenAI')
+        } catch (error: unknown) {
+          if (error instanceof Error && error.name === 'AbortError') {
+            return
+          }
+          const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+          logger.error('OpenAI streaming error', error)
+          latestContent += `\n\n[Error: ${errorMessage}]`
+          onChunk(`\n\n[Error: ${errorMessage}]`, latestContent, true)
         }
-        const errorMessage = error instanceof Error ? error.message : 'Unknown error'
-        logger.error('OpenAI streaming error', error)
-        onChunk(`\n\n[Error: ${errorMessage}]`, latestContent, true)
-      }
-    })()
+      })()
 
     return controller
   }

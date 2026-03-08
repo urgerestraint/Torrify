@@ -103,7 +103,12 @@ export const streamSseResponse = async (
       break
     }
 
-    buffer += decoder.decode(value, { stream: true })
+    const chunk = decoder.decode(value, { stream: true })
+    if (loggerPrefix) {
+      logger.debug(`[${loggerPrefix}] Raw chunk received (${value.length} bytes)`)
+    }
+
+    buffer += chunk
     const lines = buffer.split('\n')
     buffer = lines.pop() || ''
 
@@ -129,28 +134,8 @@ export const streamSseResponse = async (
         } catch {
           logger.warn(`${loggerPrefix ? `[${loggerPrefix}] ` : ''}Failed to parse SSE chunk:`, data)
         }
-      }
-    }
-  }
-}
-
-function combineAbortSignals(signals: AbortSignal[]): { signal: AbortSignal; cleanup: () => void } {
-  const controller = new AbortController()
-  const onAbort = (): void => controller.abort()
-
-  for (const signal of signals) {
-    if (signal.aborted) {
-      controller.abort()
-      return { signal: controller.signal, cleanup: () => {} }
-    }
-    signal.addEventListener('abort', onAbort, { once: true })
-  }
-
-  return {
-    signal: controller.signal,
-    cleanup: () => {
-      for (const signal of signals) {
-        signal.removeEventListener('abort', onAbort)
+      } else {
+        logger.debug(`${loggerPrefix ? `[${loggerPrefix}] ` : ''}Non-conforming line ignored:`, trimmedLine)
       }
     }
   }
@@ -169,13 +154,16 @@ export const fetchWithTimeout = async (
     signals.push(init.signal)
   }
 
-  const { signal, cleanup } = combineAbortSignals(signals)
+  // Use the modern AbortSignal.any to combine signals without manual listener management
+  // This ensures the signal is NOT detached when this helper returns.
+  const combinedSignal = (AbortSignal as any).any(signals)
 
   try {
-    return await fetch(input, {
+    const response = await fetch(input, {
       ...init,
-      signal
+      signal: combinedSignal
     })
+    return response
   } catch (error) {
     const errorName =
       typeof error === 'object' && error !== null && 'name' in error
@@ -190,6 +178,5 @@ export const fetchWithTimeout = async (
     throw error
   } finally {
     clearTimeout(timeoutId)
-    cleanup()
   }
 }

@@ -10,6 +10,7 @@ export interface LLMConfig {
   maxTokens?: number
   gatewayBaseUrl?: string
   gatewayLicenseKey?: string
+  customTimeout?: number
 }
 
 export interface RecentFile {

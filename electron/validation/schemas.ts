@@ -34,7 +34,8 @@ export const SettingsSchema = z.object({
     temperature: z.number().min(0).max(2).optional(),
     maxTokens: z.number().min(1).max(1000000).optional(),
     gatewayBaseUrl: z.string().max(512).optional(),
-    gatewayLicenseKey: z.string().max(500).optional()
+    gatewayLicenseKey: z.string().max(500).optional(),
+    customTimeout: z.number().min(1).max(3600).optional()
   }),
   recentFiles: z
     .array(
@@ -61,7 +62,7 @@ export const WindowTitleSchema = z.string().max(256)
 export const LLMMessageSchema = z.object({
   role: z.enum(['user', 'assistant', 'system']),
   content: z.string().max(MAX_CODE_SIZE),
-  imageDataUrls: z.array(z.string().max(MAX_PATH_LENGTH)).max(16).optional()
+  imageDataUrls: z.array(z.string().max(MAX_CODE_SIZE * 10)).max(16).optional()
 })
 
 export const LLMRequestPayloadSchema = z.object({
