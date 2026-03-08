@@ -94,10 +94,48 @@ export const streamSseResponse = async (
   let accumulated = ''
   let buffer = ''
 
+  const processLines = (lines: string[]) => {
+    for (const line of lines) {
+      if (!line.trim()) continue
+
+      // Split by 'data:' prefix in case multiple events are merged into one line
+      const segments = line.split(/(?=data:)/)
+
+      for (const segment of segments) {
+        const trimmedSegment = segment.trim()
+        if (!trimmedSegment || !trimmedSegment.startsWith('data:')) {
+          logger.debug(`${loggerPrefix ? `[${loggerPrefix}] ` : ''}Non-conforming line ignored:`, trimmedSegment)
+          continue
+        }
+
+        const data = trimmedSegment.replace(/^data:\s*/, '')
+        if (data === '[DONE]') {
+          logger.debug(`${loggerPrefix ? `[${loggerPrefix}] ` : ''}SSE [DONE]`, { accumulatedLength: accumulated.length })
+          onChunk('', accumulated, true)
+          return
+        }
+
+        try {
+          const parsed = JSON.parse(data)
+          const delta = parsed?.choices?.[0]?.delta?.content
+          if (delta) {
+            accumulated += delta
+            onChunk(delta, accumulated, false)
+          }
+        } catch {
+          logger.warn(`${loggerPrefix ? `[${loggerPrefix}] ` : ''}Failed to parse SSE chunk:`, data)
+        }
+      }
+    }
+  }
+
   while (true) {
     const { done, value } = await reader.read()
 
     if (done) {
+      if (buffer.trim()) {
+        processLines([buffer])
+      }
       logger.debug(`${loggerPrefix ? `[${loggerPrefix}] ` : ''}SSE stream reader done`, { accumulatedLength: accumulated.length })
       onChunk('', accumulated, true)
       break
@@ -109,35 +147,10 @@ export const streamSseResponse = async (
     }
 
     buffer += chunk
-    const lines = buffer.split('\n')
+    const lines = buffer.split(/\r\n|\r|\n/)
     buffer = lines.pop() || ''
 
-    for (const line of lines) {
-      const trimmedLine = line.trim()
-      if (!trimmedLine || trimmedLine.startsWith(':')) {
-        continue
-      }
-      if (trimmedLine.startsWith('data: ')) {
-        const data = trimmedLine.slice(6)
-        if (data === '[DONE]') {
-          logger.debug(`${loggerPrefix ? `[${loggerPrefix}] ` : ''}SSE [DONE]`, { accumulatedLength: accumulated.length })
-          onChunk('', accumulated, true)
-          return
-        }
-        try {
-          const parsed = JSON.parse(data)
-          const delta = parsed?.choices?.[0]?.delta?.content
-          if (delta) {
-            accumulated += delta
-            onChunk(delta, accumulated, false)
-          }
-        } catch {
-          logger.warn(`${loggerPrefix ? `[${loggerPrefix}] ` : ''}Failed to parse SSE chunk:`, data)
-        }
-      } else {
-        logger.debug(`${loggerPrefix ? `[${loggerPrefix}] ` : ''}Non-conforming line ignored:`, trimmedLine)
-      }
-    }
+    processLines(lines)
   }
 }
 
@@ -154,9 +167,22 @@ export const fetchWithTimeout = async (
     signals.push(init.signal)
   }
 
-  // Use the modern AbortSignal.any to combine signals without manual listener management
-  // This ensures the signal is NOT detached when this helper returns.
-  const combinedSignal = (AbortSignal as any).any(signals)
+  // Modern AbortSignal.any (Chrome 116+, Node 20+)
+  // Falls back to a manual listener-based implementation for older environments/test runners.
+  let combinedSignal: AbortSignal
+  if (typeof (AbortSignal as any).any === 'function') {
+    combinedSignal = (AbortSignal as any).any(signals)
+  } else {
+    const controller = new AbortController()
+    for (const signal of signals) {
+      if (signal.aborted) {
+        controller.abort(signal.reason)
+        break
+      }
+      signal.addEventListener('abort', () => controller.abort(signal.reason), { once: true })
+    }
+    combinedSignal = controller.signal
+  }
 
   try {
     const response = await fetch(input, {

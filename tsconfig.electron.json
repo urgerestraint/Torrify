@@ -7,8 +7,16 @@
     "skipLibCheck": true,
     "strict": true,
     "esModuleInterop": true,
-    "resolveJsonModule": true
+    "resolveJsonModule": true,
+    "types": [
+      "node",
+      "electron"
+    ]
   },
-  "include": ["electron/**/*"],
-  "exclude": ["electron/__tests__"]
+  "include": [
+    "electron/**/*"
+  ],
+  "exclude": [
+    "electron/__tests__"
+  ]
 }

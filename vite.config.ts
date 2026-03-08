@@ -38,23 +38,24 @@ export default defineConfig(() => {
             electron([
               {
                 // Main process
-                entry: 'electron/main.ts',
                 vite: {
                   build: {
                     lib: {
                       entry: 'electron/main.ts',
                       formats: ['cjs'],
-                      fileName: () => 'main.cjs',
                     },
                     rollupOptions: {
                       external: ['electron', ...Object.keys('dependencies' in pkg ? pkg.dependencies : {})],
+                      output: {
+                        entryFileNames: 'main.cjs',
+                        format: 'cjs',
+                      }
                     },
                   },
                 },
               },
               {
                 // Preload scripts
-                entry: 'electron/preload.ts',
                 onstart(options) {
                   options.reload()
                 },
@@ -63,10 +64,15 @@ export default defineConfig(() => {
                     lib: {
                       entry: 'electron/preload.ts',
                       formats: ['cjs'],
-                      fileName: () => 'preload.cjs',
                     },
                     rollupOptions: {
                       external: ['electron'],
+                      output: {
+                        entryFileNames: 'preload.cjs',
+                        format: 'cjs',
+                        inlineDynamicImports: true,
+                        exports: 'none'
+                      }
                     },
                   },
                 },
